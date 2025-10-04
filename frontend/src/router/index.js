@@ -115,9 +115,21 @@ const routes = [
     meta: { requiresAuth: true, requiresRole: ['turista'] }
   },
   {
+    path: '/position-simulator-test',
+    name: 'PositionSimulatorTest',
+    component: () => import('../views/PositionSimulatorTest.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/cart',
     name: 'ShoppingCart',
     component: () => import('../views/ShoppingCart.vue'),
+    meta: { requiresAuth: true, requiresRole: ['turista'] }
+  },
+  {
+    path: '/tours/:tourId/active',
+    name: 'ActiveTour',
+    component: () => import('../views/ActiveTour.vue'),
     meta: { requiresAuth: true, requiresRole: ['turista'] }
   }
 ]

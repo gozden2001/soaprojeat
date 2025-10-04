@@ -246,6 +246,18 @@
               
               <!-- Public Actions -->
               <div v-else-if="tour.status === 'published' && authStore.user?.role === 'turista'">
+                <!-- Start Tour Button (only if purchased) -->
+                <v-btn
+                  v-if="owns"
+                  color="green"
+                  variant="flat"
+                  prepend-icon="mdi-play"
+                  @click="startActiveTour"
+                  class="mr-2"
+                >
+                  Pokreni turu
+                </v-btn>
+                
                 <!-- Purchased Indicator -->
                 <v-chip
                   v-if="owns"
@@ -595,6 +607,10 @@ export default {
       }
     }
 
+    const startActiveTour = () => {
+      router.push(`/tours/${tour.value.id}/active`)
+    }
+
     onMounted(() => {
       loadTour()
     })
@@ -623,7 +639,8 @@ export default {
       confirmPublish,
       publishTour,
       archiveTour,
-      addToCart
+      addToCart,
+      startActiveTour
     }
   }
 }

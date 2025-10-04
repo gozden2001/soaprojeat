@@ -364,6 +364,52 @@ const cartProxy = createProxyMiddleware({
 
 app.use('/api/cart', cartProxy);
 
+// Debug middleware for tour-execution routes
+app.use('/api/tour-execution', (req, res, next) => {
+    console.log(`[DEBUG] TourExecution ${req.method} request to ${req.originalUrl}`);
+    console.log(`[DEBUG] Body:`, req.body);
+    
+    // Remove problematic expect header
+    if (req.headers.expect) {
+        delete req.headers.expect;
+        console.log(`[DEBUG] Removed expect header`);
+    }
+    
+    next();
+});
+
+// Tour Execution Service Proxy (using same TourService)
+const tourExecutionProxy = createProxyMiddleware({
+    target: process.env.TOUR_SERVICE_URL || 'http://tour-service:3003',
+    changeOrigin: true,
+    pathRewrite: {
+        '^/api/tour-execution': '/api/tour-execution'
+    },
+    onProxyReq: (proxyReq, req, res) => {
+        console.log(`[TOUR-EXECUTION-PROXY] ${req.method} ${req.originalUrl} -> ${process.env.TOUR_SERVICE_URL || 'http://tour-service:3003'}${req.url}`);
+        
+        // Handle JSON body serialization
+        if (req.body && (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH')) {
+            const bodyData = JSON.stringify(req.body);
+            proxyReq.setHeader('Content-Type', 'application/json');
+            proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
+            proxyReq.write(bodyData);
+        }
+    },
+    onProxyRes: (proxyRes, req, res) => {
+        console.log(`[TOUR-EXECUTION-PROXY] Response ${proxyRes.statusCode} for ${req.method} ${req.originalUrl}`);
+    },
+    onError: (err, req, res) => {
+        console.error(`[TOUR-EXECUTION-PROXY] Error for ${req.method} ${req.originalUrl}:`, err.message);
+        res.status(503).json({
+            error: 'Tour execution service unavailable',
+            message: 'The tour execution service is currently unavailable. Please try again later.'
+        });
+    }
+});
+
+app.use('/api/tour-execution', tourExecutionProxy);
+
 // 404 handler
 app.use('*', (req, res) => {
     res.status(404).json({
@@ -414,7 +460,14 @@ app.use('*', (req, res) => {
             'POST /api/cart/checkout',
             'GET /api/cart/purchases',
             'GET /api/cart/purchases/check/:tourId',
-            'GET /api/cart/validate/:tourId'
+            'GET /api/cart/validate/:tourId',
+            'POST /api/tour-execution/start',
+            'GET /api/tour-execution/active/:tourId',
+            'PATCH /api/tour-execution/:executionId/position',
+            'POST /api/tour-execution/:executionId/check-keypoints',
+            'PATCH /api/tour-execution/:executionId/finish',
+            'GET /api/tour-execution/history',
+            'GET /api/tour-execution/:executionId/stats'
         ]
     });
 });

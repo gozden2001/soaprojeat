@@ -278,6 +278,8 @@ export default {
 
     const getStatusColor = (status) => {
       const colors = {
+        pending: 'warning',
+        completed: 'success',
         active: 'success',
         used: 'info',
         expired: 'error',
@@ -288,6 +290,8 @@ export default {
 
     const getStatusText = (status) => {
       const texts = {
+        pending: 'Na čekanju',
+        completed: 'Kupljeno',
         active: 'Aktivan',
         used: 'Iskorišćen',
         expired: 'Istekao',
@@ -378,10 +382,9 @@ export default {
         const validation = await purchasesAPI.validatePurchaseToken(purchase.tour.id)
         
         if (validation.success && validation.data.valid) {
-          // Navigate to tour execution page
+          // Navigate to active tour page
           showMessage('Pokretanje ture...', 'info')
-          // TODO: Navigate to tour execution when implemented
-          // router.push(`/tours/${purchase.tour.id}/execute`)
+          router.push(`/tours/${purchase.tour.id}/active`)
         } else {
           showMessage(validation.data?.message || 'Token nije valjan', 'error')
         }

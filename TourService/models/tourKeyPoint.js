@@ -31,6 +31,12 @@ module.exports = (sequelize) => {
         }
       }
       
+      // Extract latitude and longitude for easier frontend access
+      if (values.coordinates && typeof values.coordinates === 'object') {
+        values.latitude = values.coordinates.latitude;
+        values.longitude = values.coordinates.longitude;
+      }
+      
       // Parse images if they're stored as string
       if (typeof values.images === 'string') {
         try {

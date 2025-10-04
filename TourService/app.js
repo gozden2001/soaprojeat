@@ -42,11 +42,13 @@ const { sequelize } = require('./models');
 const tourRoutes = require('./routes/tourRoutes');
 const tourKeyPointRoutes = require('./routes/tourKeyPointRoutes');
 const cartRoutes = require('./routes/cartRoutes');
+const tourExecutionRoutes = require('./routes/tourExecutionRoutes');
 
 // API routes
 app.use('/api/tours', tourRoutes);
 app.use('/api/tours', tourKeyPointRoutes);
 app.use('/api/cart', cartRoutes);
+app.use('/api/tour-execution', tourExecutionRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
