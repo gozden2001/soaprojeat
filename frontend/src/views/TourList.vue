@@ -99,7 +99,7 @@
         :key="tour.id"
         cols="12" sm="6" md="4" lg="3"
       >
-        <v-card class="tour-card" height="400">
+        <v-card class="tour-card" height="400" @click="viewTour(tour)" style="cursor: pointer;">
           <!-- Tour Image -->
           <v-img
             :src="tour.images?.[0] || '/placeholder-tour.jpg'"
@@ -184,7 +184,7 @@
               variant="text"
               color="primary"
               prepend-icon="mdi-eye"
-              @click="viewTour(tour)"
+              @click.stop="viewTour(tour)"
             >
               Prikaži
             </v-btn>
@@ -199,6 +199,7 @@
                     icon="mdi-dots-vertical"
                     variant="text"
                     v-bind="props"
+                    @click.stop
                   />
                 </template>
                 <v-list>
@@ -477,6 +478,7 @@ export default {
     }
 
     const viewTour = (tour) => {
+      console.log('Navigating to tour:', tour.id)
       router.push(`/tours/${tour.id}`)
     }
 

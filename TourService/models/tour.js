@@ -194,8 +194,12 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   Tour.associate = function(models) {
-    // Define associations here if needed
-    // Example: Tour.hasMany(models.KeyPoint, { foreignKey: 'tourId', as: 'keyPoints' });
+    // Tour has many key points
+    Tour.hasMany(models.TourKeyPoint, {
+      foreignKey: 'tourId',
+      as: 'keyPoints',
+      onDelete: 'CASCADE'
+    });
   };
 
   // Instance methods

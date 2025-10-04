@@ -352,7 +352,14 @@ app.use('*', (req, res) => {
             'PUT /api/tours/:id',
             'DELETE /api/tours/:id',
             'PATCH /api/tours/:id/publish',
-            'PATCH /api/tours/:id/archive'
+            'PATCH /api/tours/:id/archive',
+            'POST /api/tours/:tourId/keypoints',
+            'GET /api/tours/:tourId/keypoints',
+            'GET /api/tours/:tourId/keypoints/stats',
+            'GET /api/keypoints/:id',
+            'PUT /api/keypoints/:id',
+            'DELETE /api/keypoints/:id',
+            'PUT /api/tours/:tourId/keypoints/reorder'
         ]
     });
 });

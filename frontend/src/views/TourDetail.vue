@@ -129,6 +129,16 @@
                 </v-btn>
                 
                 <v-btn
+                  color="info"
+                  variant="outlined"
+                  prepend-icon="mdi-map-marker-multiple"
+                  @click="manageKeyPoints"
+                  class="mr-2"
+                >
+                  Ključne tačke
+                </v-btn>
+                
+                <v-btn
                   v-if="tour.status === 'draft'"
                   color="success"
                   variant="flat"
@@ -230,7 +240,7 @@ export default {
 
     const canEdit = computed(() => {
       return authStore.isAuthenticated && 
-             authStore.user?.id === tour.value?.authorId
+             parseInt(authStore.user?.id) === parseInt(tour.value?.authorId)
     })
 
     // Helper functions
@@ -300,6 +310,10 @@ export default {
       router.push(`/tours/${tour.value.id}/edit`)
     }
 
+    const manageKeyPoints = () => {
+      router.push(`/tours/${tour.value.id}/key-points`)
+    }
+
     const publishTour = async () => {
       try {
         const result = await tourAPI.publishTour(tour.value.id)
@@ -366,6 +380,7 @@ export default {
       getDifficultyText,
       goBack,
       editTour,
+      manageKeyPoints,
       publishTour,
       archiveTour,
       addToCart

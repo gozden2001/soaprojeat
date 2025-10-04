@@ -95,6 +95,12 @@ const routes = [
     name: 'TourEdit',
     component: TourCreate,
     meta: { requiresAuth: true, requiresRole: ['vodic', 'administrator'] }
+  },
+  {
+    path: '/tours/:id/key-points',
+    name: 'TourKeyPoints',
+    component: () => import('../views/TourKeyPointsManager.vue'),
+    meta: { requiresAuth: true, requiresRole: ['vodic', 'administrator'] }
   }
 ]
 
