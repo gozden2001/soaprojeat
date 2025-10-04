@@ -16,6 +16,11 @@
         <v-icon>mdi-post</v-icon>
         Blogovi
       </v-btn>
+      
+      <v-btn variant="text" to="/tours">
+        <v-icon>mdi-map</v-icon>
+        Ture
+      </v-btn>
     </div>
 
     <v-spacer></v-spacer>
@@ -29,6 +34,24 @@
       <v-btn variant="text" to="/blogs/create">
         <v-icon>mdi-plus</v-icon>
         Novi Blog
+      </v-btn>
+      
+      <v-btn 
+        v-if="authStore.user?.role === 'vodic' || authStore.user?.role === 'administrator'"
+        variant="text" 
+        to="/tours/create"
+      >
+        <v-icon>mdi-map-plus</v-icon>
+        Nova Tura
+      </v-btn>
+      
+      <v-btn 
+        v-if="authStore.user?.role === 'vodic' || authStore.user?.role === 'administrator'"
+        variant="text" 
+        to="/tours/my"
+      >
+        <v-icon>mdi-map-account</v-icon>
+        Moje Ture
       </v-btn>
       
       <v-btn variant="text" to="/profile">

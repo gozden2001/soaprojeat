@@ -8,6 +8,8 @@ import BlogListView from '../views/BlogListView.vue'
 import BlogDetailView from '../views/BlogDetailView.vue'
 import BlogCreateView from '../views/BlogCreateView.vue'
 import BlogAuthorView from '../views/BlogAuthorView.vue'
+import TourList from '../views/TourList.vue'
+import TourCreate from '../views/TourCreate.vue'
 
 const routes = [
   {
@@ -64,6 +66,35 @@ const routes = [
     path: '/users/:userId/follows',
     name: 'UserFollows',
     component: () => import('../views/UserFollowsView.vue')
+  },
+  {
+    path: '/tours',
+    name: 'TourList',
+    component: TourList
+  },
+  {
+    path: '/tours/create',
+    name: 'TourCreate',
+    component: TourCreate,
+    meta: { requiresAuth: true, requiresRole: ['vodic', 'administrator'] }
+  },
+  {
+    path: '/tours/my',
+    name: 'MyTours',
+    component: TourList,
+    meta: { requiresAuth: true },
+    props: { showMyTours: true }
+  },
+  {
+    path: '/tours/:id',
+    name: 'TourDetail',
+    component: () => import('../views/TourDetail.vue')
+  },
+  {
+    path: '/tours/:id/edit',
+    name: 'TourEdit',
+    component: TourCreate,
+    meta: { requiresAuth: true, requiresRole: ['vodic', 'administrator'] }
   }
 ]
 
@@ -79,6 +110,17 @@ router.beforeEach((to, from, next) => {
     next('/login')
   } else if (to.meta.requiresGuest && authStore.isAuthenticated) {
     next('/')
+  } else if (to.meta.requiresRole) {
+    // Check if user has required role
+    const requiredRoles = Array.isArray(to.meta.requiresRole) ? to.meta.requiresRole : [to.meta.requiresRole]
+    const userRole = authStore.user?.role
+    
+    if (!userRole || !requiredRoles.includes(userRole)) {
+      // Redirect to unauthorized page or home
+      next('/')
+    } else {
+      next()
+    }
   } else {
     next()
   }

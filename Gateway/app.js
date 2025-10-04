@@ -272,6 +272,52 @@ const commentProxy = createProxyMiddleware({
 
 app.use('/api/comments', commentProxy);
 
+// Debug middleware for tour routes
+app.use('/api/tours', (req, res, next) => {
+    console.log(`[DEBUG] Tour ${req.method} request to ${req.originalUrl}`);
+    console.log(`[DEBUG] Body:`, req.body);
+    
+    // Remove problematic expect header
+    if (req.headers.expect) {
+        delete req.headers.expect;
+        console.log(`[DEBUG] Removed expect header`);
+    }
+    
+    next();
+});
+
+// Tour Service Proxy
+const tourProxy = createProxyMiddleware({
+    target: process.env.TOUR_SERVICE_URL || 'http://tour-service:3003',
+    changeOrigin: true,
+    pathRewrite: {
+        '^/api/tours': '/api/tours'
+    },
+    onProxyReq: (proxyReq, req, res) => {
+        console.log(`[TOUR-PROXY] ${req.method} ${req.originalUrl} -> ${process.env.TOUR_SERVICE_URL || 'http://tour-service:3003'}${req.url}`);
+        
+        // Handle JSON body serialization
+        if (req.body && (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH')) {
+            const bodyData = JSON.stringify(req.body);
+            proxyReq.setHeader('Content-Type', 'application/json');
+            proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
+            proxyReq.write(bodyData);
+        }
+    },
+    onProxyRes: (proxyRes, req, res) => {
+        console.log(`[TOUR-PROXY] Response ${proxyRes.statusCode} for ${req.method} ${req.originalUrl}`);
+    },
+    onError: (err, req, res) => {
+        console.error(`[TOUR-PROXY] Error for ${req.method} ${req.originalUrl}:`, err.message);
+        res.status(503).json({
+            error: 'Tour service unavailable',
+            message: 'The tour service is currently unavailable. Please try again later.'
+        });
+    }
+});
+
+app.use('/api/tours', tourProxy);
+
 // 404 handler
 app.use('*', (req, res) => {
     res.status(404).json({
@@ -297,7 +343,16 @@ app.use('*', (req, res) => {
             'POST /api/comments/:blogId',
             'GET /api/comments/:blogId',
             'PUT /api/comments/comment/:commentId',
-            'DELETE /api/comments/comment/:commentId'
+            'DELETE /api/comments/comment/:commentId',
+            'GET /api/tours',
+            'GET /api/tours/my',
+            'GET /api/tours/stats',
+            'POST /api/tours',
+            'GET /api/tours/:id',
+            'PUT /api/tours/:id',
+            'DELETE /api/tours/:id',
+            'PATCH /api/tours/:id/publish',
+            'PATCH /api/tours/:id/archive'
         ]
     });
 });

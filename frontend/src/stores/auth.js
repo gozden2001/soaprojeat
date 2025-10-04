@@ -32,6 +32,9 @@ export const useAuthStore = defineStore('auth', {
         localStorage.setItem('authToken', token)
         localStorage.setItem('user', JSON.stringify(this.user))
         
+        // Fetch complete profile data including user ID
+        await this.fetchProfile()
+        
         return { success: true }
       } catch (error) {
         this.error = error.response?.data?.errors?.[0]?.message || 'Login failed'
