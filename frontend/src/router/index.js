@@ -59,6 +59,11 @@ const routes = [
     path: '/blogs/author/:authorId',
     name: 'BlogAuthor',
     component: BlogAuthorView
+  },
+  {
+    path: '/users/:userId/follows',
+    name: 'UserFollows',
+    component: () => import('../views/UserFollowsView.vue')
   }
 ]
 

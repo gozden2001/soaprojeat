@@ -159,15 +159,23 @@
                   </div>
                 </div>
               </div>
-              <v-btn
-                v-if="blog.author?.userId"
-                color="primary"
-                variant="outlined"
-                size="small"
-                @click="viewAuthorBlogs"
-              >
-                Više blogova autora
-              </v-btn>
+              <div class="d-flex gap-2">
+                <v-btn
+                  v-if="blog.author?.userId"
+                  color="primary"
+                  variant="outlined"
+                  size="small"
+                  @click="viewAuthorBlogs"
+                >
+                  Više blogova autora
+                </v-btn>
+                <FollowButton
+                  v-if="blog.author?.userId && blog.author.userId !== userStore.user?.id"
+                  :user-id="blog.author.userId"
+                  :username="blog.author.username"
+                  @follow-changed="onFollowChanged"
+                />
+              </div>
             </v-card-text>
           </v-card>
 
@@ -192,6 +200,13 @@
               </div>
             </v-card-text>
           </v-card>
+        </v-col>
+      </v-row>
+
+      <!-- Blog Comments Section -->
+      <v-row class="mt-6">
+        <v-col cols="12" lg="8">
+          <BlogComments :blog-id="blog._id" />
         </v-col>
       </v-row>
     </div>
@@ -232,6 +247,8 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import blogAPI from '../api/blogs'
+import FollowButton from '../components/FollowButton.vue'
+import BlogComments from '../components/BlogComments.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -357,6 +374,11 @@ const truncateText = (text, maxLength) => {
   if (!text) return ''
   if (text.length <= maxLength) return text
   return text.substring(0, maxLength) + '...'
+}
+
+const onFollowChanged = () => {
+  // This method can be used to update UI when follow status changes
+  console.log('Follow status changed')
 }
 
 // Lifecycle

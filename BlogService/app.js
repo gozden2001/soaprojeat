@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const connectDB = require('./database');
 const blogRoutes = require('./routes/blogRoutes');
+const followRoutes = require('./routes/followRoutes');
+const commentRoutes = require('./routes/commentRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -36,6 +38,8 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/blogs', blogRoutes);
+app.use('/api/follows', followRoutes);
+app.use('/api/comments', commentRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -50,7 +54,19 @@ app.use('*', (req, res) => {
       'GET /api/blogs/:id',
       'POST /api/blogs',
       'PUT /api/blogs/:id',
-      'DELETE /api/blogs/:id'
+      'DELETE /api/blogs/:id',
+      'POST /api/follows',
+      'DELETE /api/follows/:userId',
+      'GET /api/follows/:userId/followers',
+      'GET /api/follows/:userId/following',
+      'GET /api/follows/:userId/stats',
+      'GET /api/follows/check/:userId',
+      'POST /api/comments/:blogId',
+      'GET /api/comments/:blogId',
+      'PUT /api/comments/comment/:commentId',
+      'DELETE /api/comments/comment/:commentId',
+      'GET /api/comments/user/:userId',
+      'GET /api/comments/stats'
     ]
   });
 });

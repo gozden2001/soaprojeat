@@ -29,9 +29,23 @@ app.use('/api/auth', (req, res, next) => {
     next();
 });
 
-// Debug middleware for blog routes
-app.use('/api/blogs', (req, res, next) => {
-    console.log(`[DEBUG] Blog ${req.method} request to ${req.originalUrl}`);
+// Debug middleware for follow routes
+app.use('/api/follows', (req, res, next) => {
+    console.log(`[DEBUG] Follow ${req.method} request to ${req.originalUrl}`);
+    console.log(`[DEBUG] Body:`, req.body);
+    
+    // Remove problematic expect header
+    if (req.headers.expect) {
+        delete req.headers.expect;
+        console.log(`[DEBUG] Removed expect header`);
+    }
+    
+    next();
+});
+
+// Debug middleware for comment routes
+app.use('/api/comments', (req, res, next) => {
+    console.log(`[DEBUG] Comment ${req.method} request to ${req.originalUrl}`);
     console.log(`[DEBUG] Body:`, req.body);
     
     // Remove problematic expect header
@@ -78,6 +92,28 @@ app.get('/api-docs', (req, res) => {
                     'POST /api/blogs',
                     'PUT /api/blogs/:id',
                     'DELETE /api/blogs/:id'
+                ]
+            },
+            follows: {
+                base: '/api/follows',
+                endpoints: [
+                    'POST /api/follows',
+                    'DELETE /api/follows/:userId',
+                    'GET /api/follows/:userId/followers',
+                    'GET /api/follows/:userId/following',
+                    'GET /api/follows/:userId/stats',
+                    'GET /api/follows/check/:userId'
+                ]
+            },
+            comments: {
+                base: '/api/comments',
+                endpoints: [
+                    'POST /api/comments/:blogId',
+                    'GET /api/comments/:blogId',
+                    'PUT /api/comments/comment/:commentId',
+                    'DELETE /api/comments/comment/:commentId',
+                    'GET /api/comments/user/:userId',
+                    'GET /api/comments/stats'
                 ]
             }
         }
@@ -162,6 +198,80 @@ const blogProxy = createProxyMiddleware({
 
 app.use('/api/blogs', blogProxy);
 
+// Follow Service Proxy (using same BlogService)
+const followProxy = createProxyMiddleware({
+    target: process.env.BLOG_SERVICE_URL || 'http://blog-service:3002',
+    changeOrigin: true,
+    pathRewrite: {
+        '^/api/follows': '/api/follows'
+    },
+    timeout: 10000,
+    proxyTimeout: 10000,
+    onProxyReq: (proxyReq, req, res) => {
+        console.log(`[FOLLOW PROXY] ${req.method} ${req.originalUrl} -> ${proxyReq.path}`);
+        console.log(`[FOLLOW PROXY] Target: ${proxyReq.protocol}//${proxyReq.host}${proxyReq.path}`);
+        
+        if ((req.method === 'POST' || req.method === 'PUT') && req.body) {
+            const bodyData = JSON.stringify(req.body);
+            console.log(`[FOLLOW PROXY] Sending body:`, bodyData);
+            
+            proxyReq.setHeader('Content-Type', 'application/json');
+            proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
+            proxyReq.write(bodyData);
+        }
+    },
+    onProxyRes: (proxyRes, req, res) => {
+        console.log(`[FOLLOW PROXY] Response: ${proxyRes.statusCode} for ${req.originalUrl}`);
+    },
+    onError: (err, req, res) => {
+        console.error('[FOLLOW PROXY] Error:', err.message);
+        res.status(503).json({ 
+            error: 'Follow service unavailable',
+            details: err.message,
+            code: err.code
+        });
+    }
+});
+
+app.use('/api/follows', followProxy);
+
+// Comment Service Proxy (using same BlogService)
+const commentProxy = createProxyMiddleware({
+    target: process.env.BLOG_SERVICE_URL || 'http://blog-service:3002',
+    changeOrigin: true,
+    pathRewrite: {
+        '^/api/comments': '/api/comments'
+    },
+    timeout: 10000,
+    proxyTimeout: 10000,
+    onProxyReq: (proxyReq, req, res) => {
+        console.log(`[COMMENT PROXY] ${req.method} ${req.originalUrl} -> ${proxyReq.path}`);
+        console.log(`[COMMENT PROXY] Target: ${proxyReq.protocol}//${proxyReq.host}${proxyReq.path}`);
+        
+        if ((req.method === 'POST' || req.method === 'PUT') && req.body) {
+            const bodyData = JSON.stringify(req.body);
+            console.log(`[COMMENT PROXY] Sending body:`, bodyData);
+            
+            proxyReq.setHeader('Content-Type', 'application/json');
+            proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
+            proxyReq.write(bodyData);
+        }
+    },
+    onProxyRes: (proxyRes, req, res) => {
+        console.log(`[COMMENT PROXY] Response: ${proxyRes.statusCode} for ${req.originalUrl}`);
+    },
+    onError: (err, req, res) => {
+        console.error('[COMMENT PROXY] Error:', err.message);
+        res.status(503).json({ 
+            error: 'Comment service unavailable',
+            details: err.message,
+            code: err.code
+        });
+    }
+});
+
+app.use('/api/comments', commentProxy);
+
 // 404 handler
 app.use('*', (req, res) => {
     res.status(404).json({
@@ -178,7 +288,16 @@ app.use('*', (req, res) => {
             'POST /api/blogs',
             'GET /api/blogs/:id',
             'PUT /api/blogs/:id',
-            'DELETE /api/blogs/:id'
+            'DELETE /api/blogs/:id',
+            'POST /api/follows',
+            'DELETE /api/follows/:userId',
+            'GET /api/follows/:userId/followers',
+            'GET /api/follows/:userId/following',
+            'GET /api/follows/check/:userId',
+            'POST /api/comments/:blogId',
+            'GET /api/comments/:blogId',
+            'PUT /api/comments/comment/:commentId',
+            'DELETE /api/comments/comment/:commentId'
         ]
     });
 });
