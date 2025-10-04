@@ -277,12 +277,14 @@
 
 <script>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import cartAPI from '../api/cart'
 import { useAuthStore } from '../stores/auth'
 
 export default {
   name: 'ShoppingCart',
   setup() {
+    const router = useRouter()
     const authStore = useAuthStore()
     
     const loading = ref(true)
@@ -440,9 +442,7 @@ export default {
 
     const goToMyTours = () => {
       successDialog.value = false
-      // Navigate to purchased tours or user's tours
-      // This would need to be implemented based on your routing structure
-      showMessage('Preusmavanje na moje ture...')
+      router.push('/my-purchases')
     }
 
     onMounted(async () => {

@@ -102,6 +102,91 @@
             </v-card-text>
           </v-card>
 
+          <!-- Key Points - Only for purchased tours or authors -->
+          <v-card v-if="(owns || canEdit) && keyPoints.length > 0" class="mb-4">
+            <v-card-title>
+              <v-icon left class="mr-2">mdi-map-marker-multiple</v-icon>
+              Ključne tačke ture
+              <v-chip
+                v-if="owns"
+                color="success"
+                size="small"
+                variant="flat"
+                class="ml-2"
+              >
+                Kupljeno - sve tačke dostupne
+              </v-chip>
+            </v-card-title>
+            <v-card-text>
+              <v-row>
+                <v-col
+                  v-for="(keyPoint, index) in keyPoints"
+                  :key="keyPoint.id"
+                  cols="12"
+                  md="6"
+                >
+                  <v-card variant="outlined" class="h-100">
+                    <v-card-title class="text-h6">
+                      <v-chip
+                        color="primary"
+                        size="small"
+                        class="mr-2"
+                      >
+                        {{ index + 1 }}
+                      </v-chip>
+                      {{ keyPoint.name }}
+                    </v-card-title>
+                    
+                    <v-card-text>
+                      <p class="text-body-2 mb-3">{{ keyPoint.description || 'Nema opisa' }}</p>
+                      
+                      <div v-if="keyPoint.latitude && keyPoint.longitude" class="d-flex align-center mb-2">
+                        <v-icon size="small" class="mr-1">mdi-map-marker</v-icon>
+                        <span class="text-caption">
+                          {{ Number(keyPoint.latitude).toFixed(6) }}, {{ Number(keyPoint.longitude).toFixed(6) }}
+                        </span>
+                      </div>
+                      
+                      <div v-if="keyPoint.order" class="d-flex align-center">
+                        <v-icon size="small" class="mr-1">mdi-sort-numeric-ascending</v-icon>
+                        <span class="text-caption">Redosled: {{ keyPoint.order }}</span>
+                      </div>
+                    </v-card-text>
+
+                    <v-card-actions v-if="keyPoint.image">
+                      <v-img
+                        :src="keyPoint.image"
+                        height="150"
+                        cover
+                        class="rounded"
+                      />
+                    </v-card-actions>
+                  </v-card>
+                </v-col>
+              </v-row>
+            </v-card-text>
+          </v-card>
+
+          <!-- Not Purchased Message for Tourists -->
+          <v-card 
+            v-else-if="authStore.user?.role === 'turista' && !owns && tour.status === 'published'" 
+            class="mb-4"
+          >
+            <v-card-title>
+              <v-icon left class="mr-2">mdi-lock</v-icon>
+              Ključne tačke ture
+            </v-card-title>
+            <v-card-text>
+              <v-alert type="info" variant="tonal">
+                <v-alert-title>Kupite turu da vidite sve ključne tačke</v-alert-title>
+                <p class="mb-0">
+                  Tura sadrži {{ keyPoints.length || '...' }} ključnih tačaka koje će biti otkrivene nakon kupovine.
+                  Videćete početnu i krajnju tačku, kao i sve detalje o ruti.
+                </p>
+              </v-alert>
+            </v-card-text>
+          </v-card>
+
           <!-- Actions -->
           <v-card class="mb-4">
             <v-card-actions>
@@ -163,7 +248,7 @@
               <div v-else-if="tour.status === 'published' && authStore.user?.role === 'turista'">
                 <!-- Purchased Indicator -->
                 <v-chip
-                  v-if="tour.isPurchased"
+                  v-if="owns"
                   color="success"
                   variant="flat"
                   prepend-icon="mdi-check-circle"
@@ -277,6 +362,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import tourAPI from '../api/tours'
 import cartAPI from '../api/cart'
+import purchasesAPI from '../api/purchases'
 import { useAuthStore } from '../stores/auth'
 
 export default {
@@ -288,6 +374,8 @@ export default {
 
     const loading = ref(false)
     const tour = ref(null)
+    const keyPoints = ref([])
+    const owns = ref(false)
     const showSnackbar = ref(false)
     const snackbarMessage = ref('')
     const snackbarColor = ref('success')
@@ -341,9 +429,23 @@ export default {
     const loadTour = async () => {
       loading.value = true
       try {
+        console.log('Loading tour with ID:', route.params.id)
+        console.log('User role:', authStore.user?.role)
         const result = await tourAPI.getTourById(route.params.id)
+        console.log('getTourById result:', result)
         if (result.success) {
           tour.value = result.data
+          console.log('Loaded tour data:', tour.value)
+          console.log('Tour isPurchased:', tour.value.isPurchased)
+          
+          // Check ownership after loading tour
+          if (authStore.user?.role === 'turista') {
+            await checkOwnership()
+          } else if (canEdit.value) {
+            // If user is author, load key points directly
+            console.log('User is author, loading key points directly')
+            await loadKeyPoints()
+          }
         } else {
           showSnackbar.value = true
           snackbarMessage.value = result.error
@@ -356,6 +458,41 @@ export default {
         snackbarColor.value = 'error'
       } finally {
         loading.value = false
+      }
+    }
+
+    const checkOwnership = async () => {
+      try {
+        console.log('Checking ownership for tour:', route.params.id)
+        const result = await purchasesAPI.checkTourOwnership(route.params.id)
+        console.log('Ownership check result:', result)
+        if (result.success) {
+          owns.value = result.data.owns
+          console.log('Owns tour:', owns.value, 'Can edit:', canEdit.value)
+          // Load key points after ownership check
+          if (owns.value || canEdit.value) {
+            console.log('Loading key points...')
+            await loadKeyPoints()
+          }
+        }
+      } catch (error) {
+        console.error('Check ownership error:', error)
+      }
+    }
+
+    const loadKeyPoints = async () => {
+      try {
+        console.log('Attempting to load key points for tour:', route.params.id)
+        const result = await tourAPI.getTourKeyPoints(route.params.id)
+        console.log('Key points result:', result)
+        if (result.success) {
+          // Extract keyPoints array from the response
+          keyPoints.value = result.data.keyPoints || result.data || []
+          console.log('Key points loaded:', keyPoints.value)
+          console.log('Key points count:', keyPoints.value.length)
+        }
+      } catch (error) {
+        console.error('Load key points error:', error)
       }
     }
 
@@ -465,6 +602,8 @@ export default {
     return {
       loading,
       tour,
+      keyPoints,
+      owns,
       showSnackbar,
       snackbarMessage,
       snackbarColor,

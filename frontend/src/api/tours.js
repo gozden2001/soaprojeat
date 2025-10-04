@@ -210,6 +210,22 @@ const tourAPI = {
         error: error.response?.data?.message || 'Failed to fetch author tours'
       };
     }
+  },
+
+  // Get tour key points
+  getTourKeyPoints: async (tourId) => {
+    try {
+      const response = await axios.get(`/api/tours/${tourId}/keypoints`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch tour key points'
+      };
+    }
   }
 };
 

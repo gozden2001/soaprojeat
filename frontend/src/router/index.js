@@ -86,6 +86,12 @@ const routes = [
     props: { showMyTours: true }
   },
   {
+    path: '/my-purchases',
+    name: 'MyPurchasedTours',
+    component: () => import('../views/MyPurchasedTours.vue'),
+    meta: { requiresAuth: true, requiresRole: ['turista'] }
+  },
+  {
     path: '/tours/:id',
     name: 'TourDetail',
     component: () => import('../views/TourDetail.vue')
