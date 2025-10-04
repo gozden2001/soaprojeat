@@ -180,8 +180,13 @@ router.delete('/:id', authMiddleware, requireTourOwnership, async (req, res) => 
 router.patch('/:id/publish', authMiddleware, requireTourOwnership, async (req, res) => {
   try {
     const tourId = parseInt(req.params.id);
+    const { price } = req.body;
     
-    const result = await tourService.publishTour(tourId, req.user.id);
+    if (!price || price <= 0) {
+      return res.status(400).json({ message: 'Price must be greater than 0' });
+    }
+    
+    const result = await tourService.publishTour(tourId, req.user.id, price);
     
     if (result.success) {
       res.status(200).json({

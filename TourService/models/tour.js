@@ -223,11 +223,17 @@ module.exports = (sequelize, DataTypes) => {
     return this.authorId === parseInt(userId);
   };
 
-  Tour.prototype.publish = function() {
+  Tour.prototype.publish = function(price) {
     if (this.status !== 'draft') {
       throw new Error('Only draft tours can be published');
     }
+    
+    if (!price || price <= 0) {
+      throw new Error('Price must be greater than 0');
+    }
+    
     this.status = 'published';
+    this.price = price;
     return this.save();
   };
 

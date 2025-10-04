@@ -122,9 +122,9 @@ const tourAPI = {
   },
 
   // Publish tour (requires authentication and ownership)
-  publishTour: async (tourId) => {
+  publishTour: async (tourId, price) => {
     try {
-      const response = await axios.patch(`/api/tours/${tourId}/publish`);
+      const response = await axios.patch(`/api/tours/${tourId}/publish`, { price });
       return {
         success: true,
         data: response.data

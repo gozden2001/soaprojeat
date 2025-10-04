@@ -91,40 +91,42 @@
                   Address Information
                 </v-card-title>
                 <v-card-text>
-                  <v-row>
-                    <v-col cols="12" md="6">
-                      <v-text-field
-                        v-model.number="form.address.latitude"
-                        label="Latitude"
-                        type="number"
-                        step="any"
-                        prepend-inner-icon="mdi-latitude"
-                        :rules="latitudeRules"
-                        :error-messages="getFieldError('address.latitude')"
-                        variant="outlined"
-                        hint="Between -90 and 90"
-                        persistent-hint
-                        required
-                      />
-                    </v-col>
-                    <v-col cols="12" md="6">
-                      <v-text-field
-                        v-model.number="form.address.longitude"
-                        label="Longitude"
-                        type="number"
-                        step="any"
-                        prepend-inner-icon="mdi-longitude"
-                        :rules="longitudeRules"
-                        :error-messages="getFieldError('address.longitude')"
-                        variant="outlined"
-                        hint="Between -180 and 180"
-                        persistent-hint
-                        required
-                      />
-                    </v-col>
-                  </v-row>
+                  <v-btn
+                    @click="openMapDialog"
+                    color="primary"
+                    variant="outlined"
+                    size="large"
+                    block
+                    prepend-icon="mdi-map-marker-outline"
+                    class="mb-3"
+                  >
+                    {{ addressSelected ? 'Address Selected ✓' : 'Select Address from Map' }}
+                  </v-btn>
+                  
+                  <v-alert
+                    v-if="selectedLocationInfo"
+                    type="info"
+                    variant="tonal"
+                    class="mt-3"
+                  >
+                    <v-icon start>mdi-information</v-icon>
+                    {{ selectedLocationInfo }}
+                  </v-alert>
+                  
+                  <!-- Hidden field for validation -->
+                  <v-text-field
+                    v-model="addressValidation"
+                    :rules="addressRules"
+                    style="display: none;"
+                  />
                 </v-card-text>
               </v-card>
+              
+              <!-- Address Dialog -->
+              <AddressDialog 
+                ref="addressDialog" 
+                @address-selected="onAddressSelected"
+              />
               
               <v-alert
                 v-if="authStore.error && Array.isArray(authStore.error)"
@@ -175,14 +177,19 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import AddressDialog from '../components/AddressDialog.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
 const showPassword = ref(false)
+const selectedLocationInfo = ref('')
+const addressSelected = ref(false)
+const addressDialog = ref(null)
+
 const form = ref({
   name: '',
   surname: '',
@@ -194,6 +201,11 @@ const form = ref({
     latitude: null,
     longitude: null
   }
+})
+
+// For validation purposes
+const addressValidation = computed(() => {
+  return addressSelected.value ? 'selected' : ''
 })
 
 const roleOptions = [
@@ -225,14 +237,8 @@ const roleRules = [
   v => !!v || 'Role is required'
 ]
 
-const latitudeRules = [
-  v => v !== null && v !== '' || 'Latitude is required',
-  v => (v >= -90 && v <= 90) || 'Latitude must be between -90 and 90'
-]
-
-const longitudeRules = [
-  v => v !== null && v !== '' || 'Longitude is required',
-  v => (v >= -180 && v <= 180) || 'Longitude must be between -180 and 180'
+const addressRules = [
+  v => !!v || 'Address is required - please select location on map'
 ]
 
 const getFieldError = (field) => {
@@ -241,6 +247,17 @@ const getFieldError = (field) => {
     return fieldError ? fieldError.message : ''
   }
   return ''
+}
+
+const openMapDialog = () => {
+  addressDialog.value?.openDialog()
+}
+
+const onAddressSelected = (coordinates) => {
+  form.value.address.latitude = coordinates.latitude
+  form.value.address.longitude = coordinates.longitude
+  addressSelected.value = true
+  selectedLocationInfo.value = `Selected location: ${coordinates.latitude.toFixed(6)}, ${coordinates.longitude.toFixed(6)}`
 }
 
 const handleRegister = async () => {

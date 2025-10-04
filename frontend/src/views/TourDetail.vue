@@ -198,6 +198,45 @@
       </v-col>
     </v-row>
 
+    <!-- Publish Dialog -->
+    <v-dialog v-model="publishDialog" max-width="400">
+      <v-card>
+        <v-card-title>
+          <v-icon start color="success">mdi-publish</v-icon>
+          Objavi turu
+        </v-card-title>
+        <v-card-text>
+          <p class="mb-4">
+            Postavite cenu za turu "{{ tour?.name }}" pre objavljivanja.
+          </p>
+          <v-text-field
+            v-model="publishPrice"
+            label="Cena (€)"
+            type="number"
+            min="1"
+            step="0.01"
+            variant="outlined"
+            prepend-inner-icon="mdi-currency-eur"
+            :rules="[
+              v => !!v || 'Cena je obavezna',
+              v => v > 0 || 'Cena mora biti veća od 0'
+            ]"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn @click="publishDialog = false">Otkaži</v-btn>
+          <v-btn 
+            color="success" 
+            @click="confirmPublish"
+            :disabled="!publishPrice || publishPrice <= 0"
+          >
+            Objavi
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <!-- Snackbar -->
     <v-snackbar
       v-model="showSnackbar"
@@ -237,6 +276,8 @@ export default {
     const showSnackbar = ref(false)
     const snackbarMessage = ref('')
     const snackbarColor = ref('success')
+    const publishDialog = ref(false)
+    const publishPrice = ref(0)
 
     const canEdit = computed(() => {
       return authStore.isAuthenticated && 
@@ -314,13 +355,26 @@ export default {
       router.push(`/tours/${tour.value.id}/key-points`)
     }
 
-    const publishTour = async () => {
+    const openPublishDialog = () => {
+      console.log('openPublishDialog called for tour:', tour.value.id)
+      publishPrice.value = 0
+      publishDialog.value = true
+      console.log('publishDialog set to true')
+    }
+
+    const confirmPublish = async () => {
+      console.log('confirmPublish called with price:', publishPrice.value)
+      if (!publishPrice.value || publishPrice.value <= 0) return
+
       try {
-        const result = await tourAPI.publishTour(tour.value.id)
+        console.log('Calling API with tour ID:', tour.value.id, 'and price:', publishPrice.value)
+        const result = await tourAPI.publishTour(tour.value.id, publishPrice.value)
         if (result.success) {
           showSnackbar.value = true
           snackbarMessage.value = 'Tura je uspešno objavljena!'
           snackbarColor.value = 'success'
+          publishDialog.value = false
+          publishPrice.value = 0
           loadTour() // Reload to get updated status
         } else {
           showSnackbar.value = true
@@ -333,6 +387,11 @@ export default {
         snackbarMessage.value = 'Greška prilikom objavljivanja ture'
         snackbarColor.value = 'error'
       }
+    }
+
+    const publishTour = async () => {
+      // This method is now replaced with openPublishDialog
+      openPublishDialog()
     }
 
     const archiveTour = async () => {
@@ -381,6 +440,10 @@ export default {
       goBack,
       editTour,
       manageKeyPoints,
+      publishDialog,
+      publishPrice,
+      openPublishDialog,
+      confirmPublish,
       publishTour,
       archiveTour,
       addToCart

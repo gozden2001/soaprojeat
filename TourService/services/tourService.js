@@ -217,7 +217,7 @@ class TourService {
   }
 
   // Publish tour
-  async publishTour(tourId, userId) {
+  async publishTour(tourId, userId, price) {
     try {
       const tour = await Tour.findByPk(tourId);
 
@@ -235,7 +235,7 @@ class TourService {
         };
       }
 
-      await tour.publish();
+      await tour.publish(price);
 
       return {
         success: true,
