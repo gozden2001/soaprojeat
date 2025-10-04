@@ -5,65 +5,94 @@
         <v-card class="mx-auto" max-width="500">
           <v-card-title class="text-center pa-6">
             <v-icon size="48" class="mb-4">mdi-map-marker</v-icon>
-            <h2>Welcome to Tourism App</h2>
+            <h2>Dobrodošli u Tourism App</h2>
           </v-card-title>
           
           <v-card-text class="text-center">
-            <p class="text-h6 mb-4">Explore amazing tours and create unforgettable memories!</p>
+            <p class="text-h6 mb-4">Istražite neverovatne ture i kreirajte nezaboravne uspomene!</p>
             
             <template v-if="authStore.isAuthenticated">
               <v-alert type="success" class="mb-4">
-                Welcome, {{ authStore.user?.username }}! ({{ authStore.user?.role }})
+                Dobrodošli, {{ authStore.user?.username }}! ({{ authStore.user?.role === 'vodic' ? 'Vodič' : 'Turista' }})
               </v-alert>
               
               <div class="d-flex flex-column ga-3">
                 <v-btn 
-                  to="/profile" 
+                  to="/blogs" 
                   color="primary" 
                   size="large"
-                  prepend-icon="mdi-account-circle"
+                  prepend-icon="mdi-post"
                   variant="elevated"
                 >
-                  Manage Profile
+                  Pogledaj Blogove
+                </v-btn>
+                
+                <v-btn 
+                  to="/blogs/create" 
+                  color="success" 
+                  size="large"
+                  prepend-icon="mdi-plus"
+                  variant="outlined"
+                >
+                  Kreiraj Novi Blog
+                </v-btn>
+                
+                <v-btn 
+                  to="/profile" 
+                  color="info" 
+                  size="large"
+                  prepend-icon="mdi-account-circle"
+                  variant="outlined"
+                >
+                  Upravljaj Profilom
                 </v-btn>
                 
                 <template v-if="authStore.isVodic">
                   <v-btn 
-                    color="success" 
+                    color="secondary" 
                     size="large"
                     prepend-icon="mdi-map-plus"
                     variant="outlined"
                     disabled
                   >
-                    Create Tours (Coming Soon)
+                    Kreiraj Ture (Uskoro)
                   </v-btn>
                 </template>
                 
                 <template v-if="authStore.isTurista">
                   <v-btn 
-                    color="info" 
+                    color="warning" 
                     size="large"
                     prepend-icon="mdi-compass"
                     variant="outlined"
                     disabled
                   >
-                    Explore Tours (Coming Soon)
+                    Istraži Ture (Uskoro)
                   </v-btn>
                 </template>
               </div>
             </template>
             
             <template v-else>
-              <p class="mb-4">Please login or create an account to get started</p>
+              <p class="mb-4">Molimo prijavite se ili kreirajte nalog da biste počeli</p>
               <div class="d-flex flex-column ga-3">
                 <v-btn 
-                  to="/login" 
+                  to="/blogs" 
                   color="primary" 
                   size="large"
-                  prepend-icon="mdi-login"
+                  prepend-icon="mdi-post"
                   variant="elevated"
                 >
-                  Login
+                  Pogledaj Blogove
+                </v-btn>
+                <v-btn 
+                  to="/login" 
+                  color="success" 
+                  size="large"
+                  prepend-icon="mdi-login"
+                  variant="outlined"
+                >
+                  Prijavi se
                 </v-btn>
                 <v-btn 
                   to="/signup" 
@@ -72,7 +101,7 @@
                   prepend-icon="mdi-account-plus"
                   variant="outlined"
                 >
-                  Create Account
+                  Kreiraj Nalog
                 </v-btn>
               </div>
             </template>

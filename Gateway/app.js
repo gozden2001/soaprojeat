@@ -15,9 +15,23 @@ app.use(cors({
 
 app.use(express.json());
 
-// Debug middleware
+// Debug middleware for auth routes
 app.use('/api/auth', (req, res, next) => {
     console.log(`[DEBUG] Incoming ${req.method} request to ${req.originalUrl}`);
+    console.log(`[DEBUG] Body:`, req.body);
+    
+    // Remove problematic expect header
+    if (req.headers.expect) {
+        delete req.headers.expect;
+        console.log(`[DEBUG] Removed expect header`);
+    }
+    
+    next();
+});
+
+// Debug middleware for blog routes
+app.use('/api/blogs', (req, res, next) => {
+    console.log(`[DEBUG] Blog ${req.method} request to ${req.originalUrl}`);
     console.log(`[DEBUG] Body:`, req.body);
     
     // Remove problematic expect header
@@ -51,6 +65,19 @@ app.get('/api-docs', (req, res) => {
                     'POST /api/auth/user/login', 
                     'GET /api/auth/user/profile',
                     'PUT /api/auth/user/profile'
+                ]
+            },
+            blogs: {
+                base: '/api/blogs',
+                endpoints: [
+                    'GET /api/blogs',
+                    'GET /api/blogs/search',
+                    'GET /api/blogs/stats',
+                    'GET /api/blogs/author/:authorId',
+                    'GET /api/blogs/:id',
+                    'POST /api/blogs',
+                    'PUT /api/blogs/:id',
+                    'DELETE /api/blogs/:id'
                 ]
             }
         }
@@ -96,6 +123,45 @@ const authProxy = createProxyMiddleware({
 
 app.use('/api/auth', authProxy);
 
+// Blog Service Proxy
+const blogProxy = createProxyMiddleware({
+    target: process.env.BLOG_SERVICE_URL || 'http://blog-service:3002',
+    changeOrigin: true,
+    pathRewrite: {
+        '^/api/blogs': '/api/blogs'  // Keep the same path
+    },
+    timeout: 10000,  // 10 second timeout
+    proxyTimeout: 10000,
+    onProxyReq: (proxyReq, req, res) => {
+        console.log(`[BLOG PROXY] ${req.method} ${req.originalUrl} -> ${proxyReq.path}`);
+        console.log(`[BLOG PROXY] Target: ${proxyReq.protocol}//${proxyReq.host}${proxyReq.path}`);
+        
+        // Fix JSON body serialization for POST/PUT requests
+        if ((req.method === 'POST' || req.method === 'PUT') && req.body) {
+            const bodyData = JSON.stringify(req.body);
+            console.log(`[BLOG PROXY] Sending body:`, bodyData);
+            
+            proxyReq.setHeader('Content-Type', 'application/json');
+            proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
+            proxyReq.write(bodyData);
+        }
+    },
+    onProxyRes: (proxyRes, req, res) => {
+        console.log(`[BLOG PROXY] Response: ${proxyRes.statusCode} for ${req.originalUrl}`);
+    },
+    onError: (err, req, res) => {
+        console.error('[BLOG PROXY] Error:', err.message);
+        console.error('[BLOG PROXY] Error code:', err.code);
+        res.status(503).json({ 
+            error: 'Blog service unavailable',
+            details: err.message,
+            code: err.code
+        });
+    }
+});
+
+app.use('/api/blogs', blogProxy);
+
 // 404 handler
 app.use('*', (req, res) => {
     res.status(404).json({
@@ -106,7 +172,13 @@ app.use('*', (req, res) => {
             'GET /api-docs',
             'POST /api/auth/user/register',
             'POST /api/auth/user/login',
-            'GET /api/auth/user/profile'
+            'GET /api/auth/user/profile',
+            'GET /api/blogs',
+            'GET /api/blogs/search',
+            'POST /api/blogs',
+            'GET /api/blogs/:id',
+            'PUT /api/blogs/:id',
+            'DELETE /api/blogs/:id'
         ]
     });
 });
@@ -127,4 +199,5 @@ app.listen(PORT, () => {
     console.log(`📋 Health check: http://localhost:${PORT}/health`);
     console.log(`📖 API docs: http://localhost:${PORT}/api-docs`);
     console.log(`🔐 Auth service: ${process.env.AUTH_SERVICE_URL || 'http://auth-service:3001'}`);
+    console.log(`📝 Blog service: ${process.env.BLOG_SERVICE_URL || 'http://blog-service:3002'}`);
 });

@@ -4,6 +4,10 @@ import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
 import SignUpView from '../views/SignUpView.vue'
 import ProfileView from '../views/ProfileView.vue'
+import BlogListView from '../views/BlogListView.vue'
+import BlogDetailView from '../views/BlogDetailView.vue'
+import BlogCreateView from '../views/BlogCreateView.vue'
+import BlogAuthorView from '../views/BlogAuthorView.vue'
 
 const routes = [
   {
@@ -28,6 +32,33 @@ const routes = [
     name: 'Profile',
     component: ProfileView,
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/blogs',
+    name: 'BlogList',
+    component: BlogListView
+  },
+  {
+    path: '/blogs/create',
+    name: 'BlogCreate',
+    component: BlogCreateView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/blogs/:id',
+    name: 'BlogDetail',
+    component: BlogDetailView
+  },
+  {
+    path: '/blogs/:id/edit',
+    name: 'BlogEdit',
+    component: BlogCreateView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/blogs/author/:authorId',
+    name: 'BlogAuthor',
+    component: BlogAuthorView
   }
 ]
 
