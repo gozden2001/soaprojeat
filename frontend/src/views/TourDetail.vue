@@ -160,12 +160,26 @@
               </div>
               
               <!-- Public Actions -->
-              <div v-else-if="tour.status === 'published'">
+              <div v-else-if="tour.status === 'published' && authStore.user?.role === 'turista'">
+                <!-- Purchased Indicator -->
+                <v-chip
+                  v-if="tour.isPurchased"
+                  color="success"
+                  variant="flat"
+                  prepend-icon="mdi-check-circle"
+                  class="mr-2"
+                >
+                  Kupljeno
+                </v-chip>
+                
+                <!-- Add to Cart Button -->
                 <v-btn
+                  v-else
                   color="primary"
                   variant="flat"
                   prepend-icon="mdi-cart-plus"
                   @click="addToCart"
+                  :loading="addingToCart"
                 >
                   Dodaj u korpu
                 </v-btn>
@@ -262,6 +276,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import tourAPI from '../api/tours'
+import cartAPI from '../api/cart'
 import { useAuthStore } from '../stores/auth'
 
 export default {
@@ -278,6 +293,7 @@ export default {
     const snackbarColor = ref('success')
     const publishDialog = ref(false)
     const publishPrice = ref(0)
+    const addingToCart = ref(false)
 
     const canEdit = computed(() => {
       return authStore.isAuthenticated && 
@@ -345,6 +361,33 @@ export default {
 
     const goBack = () => {
       router.go(-1)
+    }
+
+    const addToCart = async () => {
+      try {
+        addingToCart.value = true
+        const result = await cartAPI.addToCart(tour.value.id)
+        
+        if (result.success) {
+          showSnackbar.value = true
+          snackbarMessage.value = result.data.message || 'Tura je dodana u korpu'
+          snackbarColor.value = 'success'
+          
+          // Update tour purchase status
+          await loadTour()
+        } else {
+          showSnackbar.value = true
+          snackbarMessage.value = result.error || 'Greška pri dodavanju u korpu'
+          snackbarColor.value = 'error'
+        }
+      } catch (error) {
+        console.error('Add to cart error:', error)
+        showSnackbar.value = true
+        snackbarMessage.value = 'Greška pri dodavanju u korpu'
+        snackbarColor.value = 'error'
+      } finally {
+        addingToCart.value = false
+      }
     }
 
     const editTour = () => {
@@ -415,13 +458,6 @@ export default {
       }
     }
 
-    const addToCart = () => {
-      // TODO: Implement shopping cart functionality
-      showSnackbar.value = true
-      snackbarMessage.value = 'Funkcionalnost korpe će biti implementirana u sledećoj tački'
-      snackbarColor.value = 'info'
-    }
-
     onMounted(() => {
       loadTour()
     })
@@ -432,6 +468,8 @@ export default {
       showSnackbar,
       snackbarMessage,
       snackbarColor,
+      addingToCart,
+      authStore,
       canEdit,
       getStatusColor,
       getStatusText,

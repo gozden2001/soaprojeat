@@ -318,6 +318,52 @@ const tourProxy = createProxyMiddleware({
 
 app.use('/api/tours', tourProxy);
 
+// Debug middleware for cart routes
+app.use('/api/cart', (req, res, next) => {
+    console.log(`[DEBUG] Cart ${req.method} request to ${req.originalUrl}`);
+    console.log(`[DEBUG] Body:`, req.body);
+    
+    // Remove problematic expect header
+    if (req.headers.expect) {
+        delete req.headers.expect;
+        console.log(`[DEBUG] Removed expect header`);
+    }
+    
+    next();
+});
+
+// Cart Service Proxy (using same TourService)
+const cartProxy = createProxyMiddleware({
+    target: process.env.TOUR_SERVICE_URL || 'http://tour-service:3003',
+    changeOrigin: true,
+    pathRewrite: {
+        '^/api/cart': '/api/cart'
+    },
+    onProxyReq: (proxyReq, req, res) => {
+        console.log(`[CART-PROXY] ${req.method} ${req.originalUrl} -> ${process.env.TOUR_SERVICE_URL || 'http://tour-service:3003'}${req.url}`);
+        
+        // Handle JSON body serialization
+        if (req.body && (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH')) {
+            const bodyData = JSON.stringify(req.body);
+            proxyReq.setHeader('Content-Type', 'application/json');
+            proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
+            proxyReq.write(bodyData);
+        }
+    },
+    onProxyRes: (proxyRes, req, res) => {
+        console.log(`[CART-PROXY] Response ${proxyRes.statusCode} for ${req.method} ${req.originalUrl}`);
+    },
+    onError: (err, req, res) => {
+        console.error(`[CART-PROXY] Error for ${req.method} ${req.originalUrl}:`, err.message);
+        res.status(503).json({
+            error: 'Cart service unavailable',
+            message: 'The shopping cart service is currently unavailable. Please try again later.'
+        });
+    }
+});
+
+app.use('/api/cart', cartProxy);
+
 // 404 handler
 app.use('*', (req, res) => {
     res.status(404).json({
@@ -359,7 +405,16 @@ app.use('*', (req, res) => {
             'GET /api/keypoints/:id',
             'PUT /api/keypoints/:id',
             'DELETE /api/keypoints/:id',
-            'PUT /api/tours/:tourId/keypoints/reorder'
+            'PUT /api/tours/:tourId/keypoints/reorder',
+            'GET /api/cart',
+            'POST /api/cart/add',
+            'DELETE /api/cart/remove',
+            'DELETE /api/cart/clear',
+            'GET /api/cart/checkout/summary',
+            'POST /api/cart/checkout',
+            'GET /api/cart/purchases',
+            'GET /api/cart/purchases/check/:tourId',
+            'GET /api/cart/validate/:tourId'
         ]
     });
 });

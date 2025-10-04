@@ -1,4 +1,4 @@
-const { Tour } = require('../models');
+const { Tour, TourPurchaseToken } = require('../models');
 const { Op } = require('sequelize');
 
 class TourService {
@@ -338,6 +338,157 @@ class TourService {
       return {
         success: false,
         error: error.message || 'Failed to search tours by tags'
+      };
+    }
+  }
+
+  // Get all tours with purchase information for a user
+  async getAllToursWithPurchaseInfo(options = {}, userId = null) {
+    try {
+      const result = await this.getAllTours(options);
+      
+      if (!result.success || !userId) {
+        return result;
+      }
+
+      // Get user's purchased tours
+      const purchasedTours = userId ? await TourPurchaseToken.findAll({
+        where: {
+          userId,
+          isActive: true,
+          status: { [Op.in]: ['pending', 'completed'] }
+        },
+        attributes: ['tourId', 'purchaseToken', 'purchaseDate']
+      }) : [];
+
+      const purchasedTourIds = new Set(purchasedTours.map(p => p.tourId));
+      const purchaseMap = new Map(purchasedTours.map(p => [p.tourId, p]));
+
+      // Add purchase information to each tour
+      const toursWithPurchaseInfo = result.data.tours.map(tour => {
+        const isPurchased = purchasedTourIds.has(tour.id);
+        const purchase = purchaseMap.get(tour.id);
+
+        return {
+          ...tour.toJSON(),
+          isPurchased,
+          purchaseInfo: isPurchased ? {
+            purchaseToken: purchase.purchaseToken,
+            purchaseDate: purchase.purchaseDate
+          } : null,
+          // Hide key points for non-purchased tours (except for owners)
+          keyPoints: (isPurchased || (userId && tour.authorId === userId)) 
+            ? tour.keyPoints 
+            : [],
+          // Show limited info for non-purchased tours
+          limitedInfo: !isPurchased && tour.authorId !== userId
+        };
+      });
+
+      return {
+        ...result,
+        data: {
+          ...result.data,
+          tours: toursWithPurchaseInfo
+        }
+      };
+    } catch (error) {
+      console.error('Get tours with purchase info error:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to get tours with purchase information'
+      };
+    }
+  }
+
+  // Get tour by ID with purchase information
+  async getTourByIdWithPurchaseInfo(tourId, userId = null) {
+    try {
+      const result = await this.getTourById(tourId);
+      
+      if (!result.success) {
+        return result;
+      }
+
+      const tour = result.data;
+      let isPurchased = false;
+      let purchaseInfo = null;
+
+      // Check if user purchased this tour
+      if (userId) {
+        const purchase = await TourPurchaseToken.findOne({
+          where: {
+            userId,
+            tourId,
+            isActive: true,
+            status: { [Op.in]: ['pending', 'completed'] }
+          }
+        });
+
+        if (purchase) {
+          isPurchased = true;
+          purchaseInfo = {
+            purchaseToken: purchase.purchaseToken,
+            purchaseDate: purchase.purchaseDate,
+            purchasePrice: parseFloat(purchase.purchasePrice)
+          };
+        }
+      }
+
+      // Determine what information to show
+      const isOwner = userId && tour.authorId === userId;
+      const canSeeFullInfo = isPurchased || isOwner;
+
+      const tourData = {
+        ...tour.toJSON(),
+        isPurchased,
+        purchaseInfo,
+        isOwner,
+        canSeeFullInfo,
+        // Show limited info based on purchase status
+        keyPoints: canSeeFullInfo ? tour.keyPoints : [],
+        limitedInfo: !canSeeFullInfo
+      };
+
+      // If it's limited info, only show basic details
+      if (tourData.limitedInfo) {
+        const limitedTour = {
+          id: tourData.id,
+          name: tourData.name,
+          description: tourData.description,
+          difficulty: tourData.difficulty,
+          tags: tourData.tags,
+          status: tourData.status,
+          price: tourData.price,
+          authorId: tourData.authorId,
+          authorUsername: tourData.authorUsername,
+          images: tourData.images || [],
+          estimatedDuration: tourData.estimatedDuration,
+          createdAt: tourData.createdAt,
+          updatedAt: tourData.updatedAt,
+          isPurchased: false,
+          purchaseInfo: null,
+          isOwner: false,
+          canSeeFullInfo: false,
+          keyPoints: [],
+          limitedInfo: true
+        };
+
+        return {
+          success: true,
+          data: limitedTour
+        };
+      }
+
+      return {
+        success: true,
+        data: tourData
+      };
+    } catch (error) {
+      console.error('Get tour by ID with purchase info error:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to get tour with purchase information'
       };
     }
   }

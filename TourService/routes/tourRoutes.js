@@ -7,7 +7,10 @@ const { validateCreateTour, validateUpdateTour, validateListTours } = require('.
 // GET /api/tours - Get all tours (public with filtering)
 router.get('/', validateListTours, async (req, res) => {
   try {
-    const result = await tourService.getAllTours(req.query);
+    // Check if user is authenticated to provide purchase info
+    const userId = req.user?.id || null;
+    
+    const result = await tourService.getAllToursWithPurchaseInfo(req.query, userId);
     
     if (result.success) {
       res.status(200).json(result.data);
@@ -124,7 +127,10 @@ router.get('/:id', async (req, res) => {
       return res.status(400).json({ message: 'Invalid tour ID' });
     }
     
-    const result = await tourService.getTourById(tourId);
+    // Check if user is authenticated to provide purchase info
+    const userId = req.user?.id || null;
+    
+    const result = await tourService.getTourByIdWithPurchaseInfo(tourId, userId);
     
     if (result.success) {
       res.status(200).json(result.data);

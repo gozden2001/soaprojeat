@@ -200,6 +200,20 @@ module.exports = (sequelize, DataTypes) => {
       as: 'keyPoints',
       onDelete: 'CASCADE'
     });
+
+    // Tour has many purchase tokens
+    Tour.hasMany(models.TourPurchaseToken, {
+      foreignKey: 'tourId',
+      as: 'purchaseTokens',
+      onDelete: 'CASCADE'
+    });
+
+    // Tour has many order items
+    Tour.hasMany(models.OrderItem, {
+      foreignKey: 'tourId',
+      as: 'orderItems',
+      onDelete: 'RESTRICT'
+    });
   };
 
   // Instance methods

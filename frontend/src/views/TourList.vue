@@ -191,6 +191,30 @@
             
             <v-spacer />
             
+            <!-- Tourist Actions - Add to Cart -->
+            <v-btn
+              v-if="authStore.user?.role === 'turista' && tour.status === 'published' && !tour.isPurchased && !showMyTours"
+              variant="text"
+              color="success"
+              prepend-icon="mdi-cart-plus"
+              @click.stop="addToCart(tour.id)"
+              :loading="addingToCart.has(tour.id)"
+              size="small"
+            >
+              Dodaj u korpu
+            </v-btn>
+            
+            <!-- Purchased Indicator -->
+            <v-chip
+              v-if="tour.isPurchased"
+              color="success"
+              variant="flat"
+              size="small"
+              prepend-icon="mdi-check-circle"
+            >
+              Kupljeno
+            </v-chip>
+            
             <!-- Author Actions -->
             <div v-if="canEditTour(tour)" class="d-flex">
               <v-menu location="bottom">
@@ -374,6 +398,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import tourAPI from '../api/tours'
+import cartAPI from '../api/cart'
 import { useAuthStore } from '../stores/auth'
 
 export default {
@@ -402,6 +427,7 @@ export default {
     const publishDialog = ref(false)
     const publishPrice = ref(0)
     const selectedTour = ref(null)
+    const addingToCart = ref(new Set())
 
     const filters = reactive({
       status: '',
@@ -515,6 +541,36 @@ export default {
         snackbarColor.value = 'error'
       } finally {
         loading.value = false
+      }
+    }
+
+    const addToCart = async (tourId) => {
+      try {
+        addingToCart.value.add(tourId)
+        const result = await cartAPI.addToCart(tourId)
+        
+        if (result.success) {
+          showSnackbar.value = true
+          snackbarMessage.value = result.data.message || 'Tura je dodana u korpu'
+          snackbarColor.value = 'success'
+          
+          // Update the tour to mark it as in cart (optional, you might want to track this)
+          const tour = tours.value.find(t => t.id === tourId)
+          if (tour) {
+            tour.inCart = true
+          }
+        } else {
+          showSnackbar.value = true
+          snackbarMessage.value = result.error || 'Greška pri dodavanju u korpu'
+          snackbarColor.value = 'error'
+        }
+      } catch (error) {
+        console.error('Add to cart error:', error)
+        showSnackbar.value = true
+        snackbarMessage.value = 'Greška pri dodavanju u korpu'
+        snackbarColor.value = 'error'
+      } finally {
+        addingToCart.value.delete(tourId)
       }
     }
 
@@ -641,7 +697,9 @@ export default {
       getStatusText,
       getDifficultyColor,
       getDifficultyText,
+      addingToCart,
       loadTours,
+      addToCart,
       viewTour,
       editTour,
       canEditTour,

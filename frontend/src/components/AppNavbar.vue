@@ -63,6 +63,15 @@
         Pozicija
       </v-btn>
       
+      <v-btn 
+        v-if="authStore.user?.role === 'turista'"
+        variant="text" 
+        to="/cart"
+      >
+        <v-icon>mdi-cart</v-icon>
+        Korpa
+      </v-btn>
+      
       <v-btn variant="text" to="/profile">
         <v-icon>mdi-account-circle</v-icon>
         Profil

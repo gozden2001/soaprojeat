@@ -107,6 +107,12 @@ const routes = [
     name: 'PositionSimulator',
     component: () => import('../views/PositionSimulator.vue'),
     meta: { requiresAuth: true, requiresRole: ['turista'] }
+  },
+  {
+    path: '/cart',
+    name: 'ShoppingCart',
+    component: () => import('../views/ShoppingCart.vue'),
+    meta: { requiresAuth: true, requiresRole: ['turista'] }
   }
 ]
 
