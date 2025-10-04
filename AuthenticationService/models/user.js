@@ -72,6 +72,22 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true,
     },
+    currentLatitude: {
+      type: DataTypes.DECIMAL(10, 8),
+      allowNull: true,
+      validate: {
+        min: -90,
+        max: 90
+      }
+    },
+    currentLongitude: {
+      type: DataTypes.DECIMAL(11, 8),
+      allowNull: true,
+      validate: {
+        min: -180,
+        max: 180
+      }
+    },
   }, {
     sequelize,
     timestamps: false,

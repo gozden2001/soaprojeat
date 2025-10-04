@@ -1,5 +1,6 @@
 const { Result, StatusEnum } = require('../utils/result');
 const UserService = require('../services/userService');
+const { User } = require('../models');
 const sagaService = require('../services/sagaService');
 const { parseValidationErrors } = require('../utils/errorParser');
 const { registerValidator, loginValidator, profileValidator } = require('../validators/userValidators');
@@ -453,6 +454,140 @@ router.get('/list', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-	
+
+// Get current user position
+/**
+ * @swagger
+ * /api/user/position:
+ *   get:
+ *     summary: Get current user position
+ *     tags: [Position]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Current position retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 latitude:
+ *                   type: number
+ *                   format: float
+ *                   example: 45.2671
+ *                 longitude:
+ *                   type: number
+ *                   format: float
+ *                   example: 19.8335
+ *       404:
+ *         description: Position not set
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/position', jwtParser.extractTokenUser, async (req, res) => {
+  try {
+    const user = await User.findByPk(req.user.id, {
+      attributes: ['currentLatitude', 'currentLongitude']
+    });
+
+    if (!user || (!user.currentLatitude || !user.currentLongitude)) {
+      return res.status(404).json({ 
+        message: 'Position not set',
+        latitude: null,
+        longitude: null
+      });
+    }
+
+    res.status(200).json({
+      latitude: parseFloat(user.currentLatitude),
+      longitude: parseFloat(user.currentLongitude)
+    });
+  } catch (error) {
+    console.error('Get position error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Set current user position
+/**
+ * @swagger
+ * /api/user/position:
+ *   put:
+ *     summary: Set current user position
+ *     tags: [Position]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - latitude
+ *               - longitude
+ *             properties:
+ *               latitude:
+ *                 type: number
+ *                 format: float
+ *                 minimum: -90
+ *                 maximum: 90
+ *                 example: 45.2671
+ *               longitude:
+ *                 type: number
+ *                 format: float
+ *                 minimum: -180
+ *                 maximum: 180
+ *                 example: 19.8335
+ *     responses:
+ *       200:
+ *         description: Position updated successfully
+ *       400:
+ *         description: Invalid coordinates
+ *       401:
+ *         description: Unauthorized
+ */
+router.put('/position', jwtParser.extractTokenUser, async (req, res) => {
+  try {
+    const { latitude, longitude } = req.body;
+
+    // Validate coordinates
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+      return res.status(400).json({ 
+        error: 'Latitude and longitude must be numbers' 
+      });
+    }
+
+    if (latitude < -90 || latitude > 90) {
+      return res.status(400).json({ 
+        error: 'Latitude must be between -90 and 90' 
+      });
+    }
+
+    if (longitude < -180 || longitude > 180) {
+      return res.status(400).json({ 
+        error: 'Longitude must be between -180 and 180' 
+      });
+    }
+
+    await User.update({
+      currentLatitude: latitude,
+      currentLongitude: longitude
+    }, {
+      where: { id: req.user.id }
+    });
+
+    res.status(200).json({
+      message: 'Position updated successfully',
+      latitude: latitude,
+      longitude: longitude
+    });
+  } catch (error) {
+    console.error('Set position error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 	
 module.exports = router;

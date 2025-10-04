@@ -54,6 +54,15 @@
         Moje Ture
       </v-btn>
       
+      <v-btn 
+        v-if="authStore.user?.role === 'turista'"
+        variant="text" 
+        to="/position-simulator"
+      >
+        <v-icon>mdi-crosshairs-gps</v-icon>
+        Pozicija
+      </v-btn>
+      
       <v-btn variant="text" to="/profile">
         <v-icon>mdi-account-circle</v-icon>
         Profil

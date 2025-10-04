@@ -101,6 +101,12 @@ const routes = [
     name: 'TourKeyPoints',
     component: () => import('../views/TourKeyPointsManager.vue'),
     meta: { requiresAuth: true, requiresRole: ['vodic', 'administrator'] }
+  },
+  {
+    path: '/position-simulator',
+    name: 'PositionSimulator',
+    component: () => import('../views/PositionSimulator.vue'),
+    meta: { requiresAuth: true, requiresRole: ['turista'] }
   }
 ]
 
