@@ -1,0 +1,195 @@
+services:
+  # PostgreSQL Database for Auth & Tours
+  postgres:
+    image: postgres:15-alpine
+    container_name: tourism_postgres
+    environment:
+      POSTGRES_DB: tourism_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    ports:
+      - "5433:5432"  # Using 5433 because 5432 is taken
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - tourism_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MongoDB Database for Blog & Followers
+  mongodb:
+    image: mongo:7-jammy
+    container_name: tourism_mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+      MONGO_INITDB_DATABASE: blog_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - tourism_network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Authentication Service
+  auth-service:
+    build:
+      context: ./AuthenticationService
+      dockerfile: Dockerfile
+    container_name: tourism_auth_service
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: tourism_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres123
+      JWT_SECRET_KEY: your-super-secret-jwt-key-here
+      JWT_EXPIRES_IN: 7d
+      COOKIE_EXPIRES_IN: 7d
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tourism_network
+    volumes:
+      - ./AuthenticationService:/app
+      - /app/node_modules
+    command: ["npm", "start"]
+
+  # Gateway Service
+  gateway:
+    build:
+      context: ./Gateway
+      dockerfile: Dockerfile
+    container_name: tourism_gateway
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      AUTH_SERVICE_URL: http://auth-service:3001
+      BLOG_SERVICE_URL: http://blog-service:3002
+      TOUR_SERVICE_URL: http://tour-service:3003
+      PURCHASE_SERVICE_URL: http://purchase-service:3004
+    ports:
+      - "3000:3000"
+    depends_on:
+      - auth-service
+    networks:
+      - tourism_network
+    volumes:
+      - ./Gateway:/app
+      - /app/node_modules
+
+  # Blog Service (to be created)
+  blog-service:
+    build:
+      context: ./BlogService
+      dockerfile: Dockerfile
+    container_name: tourism_blog_service
+    environment:
+      NODE_ENV: production
+      PORT: 3002
+      MONGODB_URI: mongodb://admin:admin123@mongodb:27017/blog_db?authSource=admin
+      AUTH_SERVICE_URL: http://auth-service:3001
+    ports:
+      - "3002:3002"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - tourism_network
+    volumes:
+      - ./BlogService:/app
+      - /app/node_modules
+
+  # Tour Service (to be created)
+  tour-service:
+    build:
+      context: ./TourService
+      dockerfile: Dockerfile
+    container_name: tourism_tour_service
+    environment:
+      NODE_ENV: production
+      PORT: 3003
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: tourism_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres123
+      AUTH_SERVICE_URL: http://auth-service:3001
+    ports:
+      - "3003:3003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tourism_network
+    volumes:
+      - ./TourService:/app
+      - /app/node_modules
+
+  # Purchase & Execution Service (to be created)
+  purchase-service:
+    build:
+      context: ./PurchaseService
+      dockerfile: Dockerfile
+    container_name: tourism_purchase_service
+    environment:
+      NODE_ENV: production
+      PORT: 3004
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: tourism_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres123
+      AUTH_SERVICE_URL: http://auth-service:3001
+      TOUR_SERVICE_URL: http://tour-service:3003
+    ports:
+      - "3004:3004"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tourism_network
+    volumes:
+      - ./PurchaseService:/app
+      - /app/node_modules
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: tourism_frontend
+    environment:
+      NODE_ENV: production
+      VITE_API_BASE_URL: http://localhost:3000
+    ports:
+      - "5173:5173"
+    depends_on:
+      - gateway
+    networks:
+      - tourism_network
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+networks:
+  tourism_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  mongodb_data:

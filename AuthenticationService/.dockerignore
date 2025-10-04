@@ -1,0 +1,18 @@
+# Docker ignore file for AuthenticationService
+node_modules/
+npm-debug.log*
+.nyc_output
+coverage/
+.env
+.env.local
+.env.*.local
+*.log
+logs/
+.DS_Store
+Thumbs.db
+.git/
+.gitignore
+README.md
+.dockerignore
+Dockerfile*
+docker-compose*
