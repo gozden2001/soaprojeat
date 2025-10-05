@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package tour;
+
+service TourService {
+  rpc CreateTour (CreateTourRequest) returns (CreateTourResponse);
+  rpc DeleteKeyPoint (DeleteKeyPointRequest) returns (DeleteKeyPointResponse);
+}
+
+message CreateTourRequest {
+  string name = 1;
+  string description = 2;
+  repeated string tags = 3;
+  int32 authorId = 4;
+  double price = 5;
+  string category = 6;
+  string difficulty = 7;
+  int32 estimatedDurationMinutes = 8;
+}
+
+message CreateTourResponse {
+  bool success = 1;
+  string message = 2;
+  int32 tourId = 3;
+  string status = 4;
+}
+
+message DeleteKeyPointRequest {
+  int32 keyPointId = 1;
+  int32 userId = 2;
+}
+
+message DeleteKeyPointResponse {
+  bool success = 1;
+  string message = 2;
+}

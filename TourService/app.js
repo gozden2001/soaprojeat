@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const { startGrpcServer } = require('./grpc/tourGrpcService');
 
 const app = express();
 const PORT = process.env.PORT || 3003;
@@ -125,6 +126,9 @@ const startServer = async () => {
       console.log(`🏥 Health check: http://localhost:${PORT}/health`);
       console.log(`📚 API docs: http://localhost:${PORT}/api/tours`);
     });
+    
+    // Start gRPC server
+    startGrpcServer();
   } catch (error) {
     console.error('❌ Failed to start server:', error);
     process.exit(1);

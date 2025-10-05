@@ -11,7 +11,7 @@ const tourExecutionAPI = {
       })
       return {
         success: true,
-        data: response.data
+        data: response.data.data  // Extract the actual execution data
       }
     } catch (error) {
       console.error('Start tour error:', error)

@@ -86,10 +86,10 @@ const tourKeyPointAPI = {
     }
   },
 
-  // Delete a key point
+  // Delete a key point via gRPC
   deleteKeyPoint: async (keyPointId) => {
     try {
-      const response = await axios.delete(`/api/keypoints/${keyPointId}`);
+      const response = await axios.delete(`/api/keypoints-rpc/${keyPointId}`);
       return {
         success: true,
         data: response.data

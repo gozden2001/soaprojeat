@@ -73,10 +73,10 @@ const tourAPI = {
     }
   },
 
-  // Create new tour (requires authentication)
+  // Create new tour via gRPC (requires authentication)
   createTour: async (tourData) => {
     try {
-      const response = await axios.post('/api/tours', tourData);
+      const response = await axios.post('/api/tours-rpc', tourData);
       return {
         success: true,
         data: response.data

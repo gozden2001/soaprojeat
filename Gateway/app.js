@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const { createProxyMiddleware } = require('http-proxy-middleware');
+const tourRpcRoutes = require('./routes/tourRpcRoutes');
+const grpcKeypointRoutes = require('./routes/grpcKeypointRoutes');
 require('dotenv').config();
 
 const app = express();
@@ -156,6 +158,10 @@ const authProxy = createProxyMiddleware({
         });
     }
 });
+
+// gRPC Routes (before proxy routes)
+app.use('/api/tours-rpc', tourRpcRoutes);
+app.use('/api/keypoints-rpc', grpcKeypointRoutes);
 
 app.use('/api/auth', authProxy);
 

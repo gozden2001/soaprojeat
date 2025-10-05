@@ -123,6 +123,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3003
+      GRPC_PORT: 50052
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: tourism_db
@@ -131,6 +132,7 @@ services:
       AUTH_SERVICE_URL: http://auth-service:3001
     ports:
       - "3003:3003"
+      - "50052:50052"
     depends_on:
       postgres:
         condition: service_healthy
