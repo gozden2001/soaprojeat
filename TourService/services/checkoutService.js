@@ -1,4 +1,4 @@
-const { ShoppingCart, OrderItem, Tour, TourPurchaseToken } = require('../models');
+const { ShoppingCart, OrderItem, Tour, TourPurchaseToken, TourExecution } = require('../models');
 const { sequelize } = require('../models');
 const { v4: uuidv4 } = require('uuid');
 
@@ -171,6 +171,17 @@ class CheckoutService {
         order: [['purchaseDate', 'DESC']]
       });
 
+      // Get all completed tour executions for this user
+      const completedExecutions = await TourExecution.findAll({
+        where: {
+          userId,
+          status: 'completed'
+        },
+        attributes: ['tourId', 'endTime']
+      });
+
+      const completedTourIds = new Set(completedExecutions.map(exec => exec.tourId));
+
       return purchases.map(purchase => ({
         id: purchase.id,
         purchaseToken: purchase.purchaseToken,
@@ -178,6 +189,8 @@ class CheckoutService {
         purchasePrice: parseFloat(purchase.purchasePrice),
         purchaseDate: purchase.purchaseDate,
         expiryDate: purchase.expiryDate,
+        isCompleted: completedTourIds.has(purchase.tourId),
+        completedAt: completedExecutions.find(exec => exec.tourId === purchase.tourId)?.endTime || null,
         tour: {
           id: purchase.tour.id,
           name: purchase.tour.name,

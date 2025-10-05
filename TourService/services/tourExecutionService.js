@@ -40,6 +40,23 @@ class TourExecutionService {
         };
       }
 
+      // Check if user has already completed this tour
+      const completedExecution = await TourExecution.findOne({
+        where: {
+          userId,
+          tourId,
+          status: 'completed'
+        }
+      });
+
+      if (completedExecution) {
+        return {
+          success: false,
+          error: 'Već ste završili ovu turu',
+          data: completedExecution
+        };
+      }
+
       // For published tours, check if user has purchase token
       let purchaseTokenId = null;
       if (tour.status === 'published') {
@@ -213,10 +230,13 @@ class TourExecutionService {
       }
 
       // Get all key points for the tour
-      const keyPoints = await TourKeyPoint.findAll({
+      const keyPointsRaw = await TourKeyPoint.findAll({
         where: { tourId: execution.tourId },
         order: [['order', 'ASC']]
       });
+
+      // Convert to JSON to extract latitude/longitude from coordinates
+      const keyPoints = keyPointsRaw.map(kp => kp.toJSON());
 
       const completedKeyPoints = execution.completedKeyPoints || [];
       const nearbyKeyPoints = [];
@@ -227,6 +247,10 @@ class TourExecutionService {
         const isCompleted = completedKeyPoints.some(cp => cp.keyPointId === keyPoint.id);
         
         // Calculate distance to key point
+        console.log(`Calculating distance for ${keyPoint.name}:`);
+        console.log(`  Current position: lat=${currentLatitude} (${typeof currentLatitude}), lng=${currentLongitude} (${typeof currentLongitude})`);
+        console.log(`  Key point position: lat=${keyPoint.latitude} (${typeof keyPoint.latitude}), lng=${keyPoint.longitude} (${typeof keyPoint.longitude})`);
+        
         const distance = this.calculateDistance(
           currentLatitude,
           currentLongitude,
@@ -234,8 +258,11 @@ class TourExecutionService {
           keyPoint.longitude
         );
 
+        console.log(`Distance to ${keyPoint.name}: ${distance.toFixed(2)}m (proximity radius: ${proximityRadius}m)`);
+
         // If nearby (regardless of completion status for frontend display)
         if (distance <= proximityRadius) {
+          console.log(`✅ Key point ${keyPoint.name} is within proximity (${distance.toFixed(2)}m <= ${proximityRadius}m)`);
           nearbyKeyPoints.push({
             id: keyPoint.id,
             name: keyPoint.name,
@@ -256,6 +283,8 @@ class TourExecutionService {
               distance
             });
           }
+        } else {
+          console.log(`❌ Key point ${keyPoint.name} is NOT within proximity (${distance.toFixed(2)}m > ${proximityRadius}m)`);
         }
       }
 
@@ -488,6 +517,35 @@ class TourExecutionService {
       return {
         success: false,
         error: error.message || 'Greška pri čišćenju napuštenih sesija'
+      };
+    }
+  }
+
+  // Check if user has completed a specific tour
+  static async checkTourCompletion(userId, tourId) {
+    try {
+      const completedExecution = await TourExecution.findOne({
+        where: {
+          userId,
+          tourId,
+          status: 'completed'
+        },
+        attributes: ['id', 'endTime']
+      });
+
+      return {
+        success: true,
+        data: {
+          isCompleted: !!completedExecution,
+          completedAt: completedExecution?.endTime || null
+        }
+      };
+
+    } catch (error) {
+      console.error('Check tour completion error:', error);
+      return {
+        success: false,
+        error: error.message || 'Greška pri proveri završetka ture'
       };
     }
   }

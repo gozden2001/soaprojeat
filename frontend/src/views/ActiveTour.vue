@@ -51,7 +51,7 @@
         <div class="d-flex justify-center mt-3">
           <v-btn 
             v-if="!isSimulatorRunning && keyPoints.length > 0" 
-            @click="startPositionSimulation"
+            @click="startPositionTracking"
             color="primary"
             prepend-icon="mdi-play"
           >
@@ -664,14 +664,19 @@ export default {
       try {
         loading.value = true
         
+        console.log('Starting tour with ID:', tour.value.id, 'Position:', currentLatitude.value, currentLongitude.value)
+        
         const result = await tourExecutionAPI.startTour(
           tour.value.id,
           currentLatitude.value,
           currentLongitude.value
         )
 
+        console.log('Start tour result:', result)
+
         if (result.success) {
           execution.value = result.data
+          console.log('Execution set to:', execution.value)
           completedKeyPoints.value = []
           showProgress('Tura je uspešno pokrenuta!')
           
@@ -680,6 +685,7 @@ export default {
             setupPositionSimulation()
           }, 1000)
         } else {
+          console.error('Start tour failed:', result.error)
           showError(result.error || 'Greška pri pokretanju ture')
         }
       } catch (error) {
@@ -703,9 +709,9 @@ export default {
           showProgress('Tura je uspešno završena!')
           stopPositionSimulation()
           
-          // Redirektuj na pregled završene ture
+          // Redirektuj na pregled kupljenih tura
           setTimeout(() => {
-            router.push('/my-tours')
+            router.push('/my-purchases')
           }, 2000)
         } else {
           showError(result.error || 'Greška pri završavanju ture')
@@ -725,46 +731,60 @@ export default {
         stopPositionSimulation()
         showProgress('Tura je pauzirana')
       } else {
-        startPositionSimulation()
+        startPositionTracking()
         showProgress('Tura je nastavljena')
       }
     }
 
     const setupPositionSimulation = () => {
-      if (!keyPoints.value || !execution.value) return
+      if (!execution.value) return
 
-      // Generiši rutu za simulator
-      positionSimulator.generateRoute(
-        keyPoints.value,
-        currentLatitude.value,
-        currentLongitude.value
-      )
-
-      // Registruj callback za primanje pozicija
+      // Registruj callback za primanje pozicija (samo manuelne promene pozicije)
       positionSimulator.onPositionUpdate(handlePositionUpdate)
       
-      // Pokreni simulator
-      startPositionSimulation()
+      // Pokreni regularno praćenje pozicije (bez automatskog kretanja)
+      startPositionTracking()
     }
 
-    const startPositionSimulation = () => {
-      positionSimulator.start()
+    const startPositionTracking = () => {
+      // NE pokrećemo automatsko kretanje - korisnik treba manuelno da klikne na PositionSimulator mapu
       isSimulatorRunning.value = true
       
-      // Pokreni regularno ažuriranje pozicije
+      // Pokreni regularno ažuriranje pozicije (svakih 10 sekundi)
       if (positionUpdateInterval) {
         clearInterval(positionUpdateInterval)
       }
       
       positionUpdateInterval = setInterval(async () => {
-        if (execution.value && currentLatitude.value && currentLongitude.value && !isPaused.value) {
-          console.log(`Position update: ${currentLatitude.value}, ${currentLongitude.value}`)
-          await updatePosition(currentLatitude.value, currentLongitude.value)
-          await checkKeyPointsProximity(currentLatitude.value, currentLongitude.value)
+        if (execution.value && !isPaused.value) {
+          try {
+            // Prvo pita Position Simulator gde se nalazi
+            const positionResult = await positionAPI.getCurrentPosition()
+            
+            if (positionResult.success && positionResult.data && positionResult.data.latitude && positionResult.data.longitude) {
+              const lat = positionResult.data.latitude
+              const lng = positionResult.data.longitude
+              
+              console.log(`Position fetched from simulator: ${lat}, ${lng}`)
+              
+              // Update local position
+              currentLatitude.value = lat
+              currentLongitude.value = lng
+              updateCurrentPosition(lat, lng)
+              
+              // Then send new position to backend for proximity check
+              await updatePosition(lat, lng)
+              await checkKeyPointsProximity(lat, lng)
+            } else {
+              console.log('No position available from simulator')
+            }
+          } catch (error) {
+            console.error('Error during position update cycle:', error)
+          }
         }
       }, 10000) // Svakých 10 sekundi
       
-      console.log('Position simulation and 10-second interval started')
+      console.log('Position tracking started - user needs to manually set position in PositionSimulator')
     }
 
     const stopPositionSimulation = () => {
@@ -811,10 +831,18 @@ export default {
     }
 
     const checkKeyPointsProximity = async (latitude, longitude) => {
-      if (!execution.value) return
+      if (!execution.value) {
+        console.log('checkKeyPointsProximity: No execution found')
+        return
+      }
+
+      console.log(`checkKeyPointsProximity: Checking proximity for position ${latitude}, ${longitude}`)
 
       try {
         const result = await tourExecutionAPI.checkKeyPoints(execution.value.id, latitude, longitude, 50)
+        
+        console.log('checkKeyPointsProximity result:', result)
+        console.log('Result data details:', JSON.stringify(result.data, null, 2))
         
         if (result.success && result.data) {
           // Update all key points with completion status
@@ -828,6 +856,7 @@ export default {
 
           // Handle new completions
           if (result.data.newCompletions && result.data.newCompletions.length > 0) {
+            console.log('New completions found:', result.data.newCompletions)
             result.data.newCompletions.forEach(completion => {
               // Add to completed key points if not already there
               if (!completedKeyPoints.value.find(cp => cp.keyPointId === completion.keyPointId)) {
@@ -835,6 +864,7 @@ export default {
                   keyPointId: completion.keyPointId,
                   completedAt: completion.completedAt
                 })
+                console.log(`Key point completed: ${completion.keyPointName}`)
                 showProgress(`Posećena ključna tačka: ${completion.keyPointName}`)
               }
             })
@@ -845,6 +875,8 @@ export default {
                 updateKeyPointsOnMap()
               }
             }, 100)
+          } else {
+            console.log('No new completions found')
           }
 
           // Update nearby key points for UI indicators
@@ -1044,7 +1076,7 @@ export default {
       startTour,
       finishTour,
       pauseResumeTour,
-      startPositionSimulation,
+      startPositionTracking,
       stopPositionSimulation,
       markKeyPointCompleted,
       isKeyPointCompleted,

@@ -453,4 +453,48 @@ router.post('/test/cleanup', requireRole(['turista', 'administrator']), async (r
   }
 });
 
+/**
+ * @swagger
+ * /api/tour-execution/check-completion/{tourId}:
+ *   get:
+ *     summary: Check if user has completed a specific tour
+ *     tags: [Tour Execution]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: tourId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the tour to check
+ *     responses:
+ *       200:
+ *         description: Completion status returned
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/check-completion/:tourId', async (req, res) => {
+  try {
+    const tourId = parseInt(req.params.tourId);
+    const userId = req.user.id;
+
+    if (!tourId) {
+      return res.status(400).json({ error: 'Tour ID je obavezan' });
+    }
+
+    const result = await TourExecutionService.checkTourCompletion(userId, tourId);
+
+    if (result.success) {
+      res.status(200).json(result.data);
+    } else {
+      res.status(400).json({ error: result.error });
+    }
+
+  } catch (error) {
+    console.error('Check tour completion error:', error);
+    res.status(500).json({ error: 'Greška pri proveri završetka ture' });
+  }
+});
+
 module.exports = router;

@@ -366,19 +366,28 @@ export default {
              (authStore.user?.role === 'vodic' || authStore.user?.role === 'administrator')
     })
     
+    // Add a ref to store last selected coordinates
+    const lastSelectedCoordinates = ref(null)
+    
     const mapCenter = computed(() => {
+      // First priority: use last selected coordinates from map
+      if (lastSelectedCoordinates.value) {
+        return lastSelectedCoordinates.value
+      }
+      // Second priority: use first existing key point
       if (keyPoints.value.length > 0) {
         const firstPoint = keyPoints.value[0]
         return firstPoint.coordinates
       }
-      return { latitude: 45.2671, longitude: 19.8335 } // Novi Sad center
+      // Fallback: Novi Sad center
+      return { latitude: 45.2671, longitude: 19.8335 }
     })
     
     const keyPointData = reactive({
       name: '',
       description: '',
       coordinates: {
-        latitude: 45.2671,
+        latitude: 45.2671, // This will be updated when dialog opens
         longitude: 19.8335
       },
       estimatedTimeMinutes: null,
@@ -448,6 +457,7 @@ export default {
       editingKeyPoint.value = null
       resetKeyPointData()
       showDialog.value = true
+      console.log('Opened add dialog with coordinates:', keyPointData.coordinates)
     }
     
     const editKeyPoint = (keyPoint) => {
@@ -465,12 +475,15 @@ export default {
     }
     
     const resetKeyPointData = () => {
+      // Use map center (which adapts based on existing key points) instead of hardcoded coordinates
+      const centerCoords = mapCenter.value
+      
       Object.assign(keyPointData, {
         name: '',
         description: '',
         coordinates: {
-          latitude: 45.2671,
-          longitude: 19.8335
+          latitude: centerCoords.latitude,
+          longitude: centerCoords.longitude
         },
         estimatedTimeMinutes: null,
         radius: 50,
@@ -478,6 +491,7 @@ export default {
         images: []
       })
       newImageUrl.value = ''
+      console.log('Reset keyPoint data with coordinates:', centerCoords)
     }
     
     const addImage = () => {
@@ -496,11 +510,17 @@ export default {
     }
     
     const onCoordinatesSelected = (coordinates) => {
+      console.log('Coordinates selected from map:', coordinates)
+      lastSelectedCoordinates.value = coordinates
       keyPointData.coordinates = coordinates
+      console.log('Updated keyPointData.coordinates:', keyPointData.coordinates)
     }
     
     const saveKeyPoint = async () => {
       if (!formValid.value) return
+      
+      console.log('Saving keyPoint with data:', keyPointData)
+      console.log('Coordinates being sent:', keyPointData.coordinates)
       
       saving.value = true
       try {
@@ -611,6 +631,7 @@ export default {
       canEdit,
       mapCenter,
       keyPointData,
+      lastSelectedCoordinates,
       nameRules,
       descriptionRules,
       latitudeRules,

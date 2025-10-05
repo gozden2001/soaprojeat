@@ -65,12 +65,12 @@
           >
             <!-- Status Badge -->
             <v-chip
-              :color="getStatusColor(purchase.status)"
+              :color="getStatusColor(purchase)"
               size="small"
               class="ma-2 position-absolute"
               style="top: 0; right: 0;"
             >
-              {{ getStatusText(purchase.status) }}
+              {{ getStatusText(purchase) }}
             </v-chip>
 
             <!-- Purchase Date -->
@@ -155,6 +155,17 @@
               size="small"
             >
               Istekao token
+            </v-btn>
+
+            <v-btn
+              v-else-if="purchase.isCompleted"
+              color="success"
+              variant="text"
+              disabled
+              size="small"
+              prepend-icon="mdi-check-circle"
+            >
+              Završena
             </v-btn>
 
             <v-btn
@@ -276,28 +287,46 @@ export default {
       return description.substring(0, maxLength) + '...'
     }
 
-    const getStatusColor = (status) => {
+    const getStatusColor = (purchase) => {
+      // Priority: completion > expiry > purchase status
+      if (purchase.isCompleted) {
+        return 'success'
+      }
+      
+      if (isExpired(purchase.expiryDate)) {
+        return 'error'
+      }
+      
       const colors = {
         pending: 'warning',
         completed: 'success',
-        active: 'success',
+        active: 'primary',
         used: 'info',
         expired: 'error',
         refunded: 'warning'
       }
-      return colors[status] || 'grey'
+      return colors[purchase.status] || 'grey'
     }
 
-    const getStatusText = (status) => {
+    const getStatusText = (purchase) => {
+      // Priority: completion > expiry > purchase status
+      if (purchase.isCompleted) {
+        return 'Završena'
+      }
+      
+      if (isExpired(purchase.expiryDate)) {
+        return 'Istekao'
+      }
+      
       const texts = {
         pending: 'Na čekanju',
         completed: 'Kupljeno',
-        active: 'Aktivan',
+        active: 'Dostupna',
         used: 'Iskorišćen',
         expired: 'Istekao',
         refunded: 'Refundiran'
       }
-      return texts[status] || status
+      return texts[purchase.status] || 'Nepoznato'
     }
 
     const getTourStatusColor = (status) => {
@@ -335,7 +364,8 @@ export default {
     const canStartTour = (purchase) => {
       return purchase.status === 'active' && 
              purchase.tour?.status === 'published' && 
-             !isExpired(purchase.expiryDate)
+             !isExpired(purchase.expiryDate) &&
+             !purchase.isCompleted  // Cannot start if already completed
     }
 
     const getActiveToursCount = () => {

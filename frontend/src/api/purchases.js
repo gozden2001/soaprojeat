@@ -50,6 +50,23 @@ const purchasesAPI = {
         error: error.response?.data?.error || 'Greška pri validaciji tokena'
       }
     }
+  },
+
+  // Check if user has completed a specific tour
+  async checkTourCompletion(tourId) {
+    try {
+      const response = await axiosInstance.get(`/api/tour-execution/check-completion/${tourId}`)
+      return {
+        success: true,
+        data: response.data
+      }
+    } catch (error) {
+      console.error('Check completion error:', error)
+      return {
+        success: false,
+        error: error.response?.data?.error || 'Greška pri proveri završetka ture'
+      }
+    }
   }
 }
 

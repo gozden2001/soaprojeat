@@ -246,9 +246,21 @@
               
               <!-- Public Actions -->
               <div v-else-if="tour.status === 'published' && authStore.user?.role === 'turista'">
-                <!-- Start Tour Button (only if purchased) -->
+                <!-- Completed Tour Indicator -->
                 <v-btn
-                  v-if="owns"
+                  v-if="owns && isCompleted"
+                  color="success"
+                  variant="flat"
+                  prepend-icon="mdi-check-circle"
+                  disabled
+                  class="mr-2"
+                >
+                  Tura završena
+                </v-btn>
+                
+                <!-- Start Tour Button (only if purchased and not completed) -->
+                <v-btn
+                  v-else-if="owns && !isCompleted"
                   color="green"
                   variant="flat"
                   prepend-icon="mdi-play"
@@ -388,6 +400,7 @@ export default {
     const tour = ref(null)
     const keyPoints = ref([])
     const owns = ref(false)
+    const isCompleted = ref(false)
     const showSnackbar = ref(false)
     const snackbarMessage = ref('')
     const snackbarColor = ref('success')
@@ -481,6 +494,12 @@ export default {
         if (result.success) {
           owns.value = result.data.owns
           console.log('Owns tour:', owns.value, 'Can edit:', canEdit.value)
+          
+          // Check if tour is completed (only for tourists who own the tour)
+          if (owns.value && authStore.user?.role === 'turista') {
+            await checkCompletion()
+          }
+          
           // Load key points after ownership check
           if (owns.value || canEdit.value) {
             console.log('Loading key points...')
@@ -489,6 +508,18 @@ export default {
         }
       } catch (error) {
         console.error('Check ownership error:', error)
+      }
+    }
+
+    const checkCompletion = async () => {
+      try {
+        const result = await purchasesAPI.checkTourCompletion(route.params.id)
+        if (result.success) {
+          isCompleted.value = result.data.isCompleted
+          console.log('Tour completed:', isCompleted.value)
+        }
+      } catch (error) {
+        console.error('Check completion error:', error)
       }
     }
 
@@ -620,6 +651,7 @@ export default {
       tour,
       keyPoints,
       owns,
+      isCompleted,
       showSnackbar,
       snackbarMessage,
       snackbarColor,
