@@ -149,6 +149,12 @@ export default {
           selectedCoordinates.longitude = parseFloat(coordinates[0].toFixed(6))
           
           addTempMarker(event.coordinate)
+          
+          // Emit coordinates when map is clicked
+          emit('coordinates-selected', {
+            latitude: selectedCoordinates.latitude,
+            longitude: selectedCoordinates.longitude
+          })
         })
         
         // Handle feature clicks for key points
@@ -215,6 +221,11 @@ export default {
       if (!isNaN(lat) && lat >= -90 && lat <= 90) {
         selectedCoordinates.latitude = lat
         updateMapCenter()
+        // Emit coordinates when manually updated
+        emit('coordinates-selected', {
+          latitude: selectedCoordinates.latitude,
+          longitude: selectedCoordinates.longitude
+        })
       }
     }
     
@@ -223,6 +234,11 @@ export default {
       if (!isNaN(lng) && lng >= -180 && lng <= 180) {
         selectedCoordinates.longitude = lng
         updateMapCenter()
+        // Emit coordinates when manually updated
+        emit('coordinates-selected', {
+          latitude: selectedCoordinates.latitude,
+          longitude: selectedCoordinates.longitude
+        })
       }
     }
     
