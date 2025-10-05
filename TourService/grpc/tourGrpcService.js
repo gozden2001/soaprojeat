@@ -118,11 +118,11 @@ function startGrpcServer() {
   
   server.bindAsync(bindAddress, grpc.ServerCredentials.createInsecure(), (error, port) => {
     if (error) {
-      console.error('❌ gRPC Server failed to bind:', error);
+      console.error('gRPC Server failed to bind:', error);
       return;
     }
-    
-    console.log(`🚀 gRPC Server running on port ${port}`);
+
+    console.log(`gRPC Server running on port ${port}`);
     server.start();
   });
 }

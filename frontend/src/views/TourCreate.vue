@@ -8,9 +8,9 @@
             <div class="hero-icon">
               <v-icon size="48" color="white">mdi-map-marker-plus</v-icon>
             </div>
-            <h1 class="hero-title font-heading">Kreiranje nove ture</h1>
+            <h1 class="hero-title font-heading">{{ heroTitle }}</h1>
             <p class="hero-subtitle">
-              Podelite svoje omiljeno mesto sa svetom i kreirajte nezaboravno putovanje
+              {{ heroSubtitle }}
             </p>
           </div>
         </div>
@@ -18,7 +18,27 @@
     </section>
 
     <v-container class="content-container">
-      <v-row justify="center">
+      <!-- Loading State for Edit Mode -->
+      <div v-if="loadingTour" class="loading-container">
+        <v-row justify="center">
+          <v-col cols="12" class="text-center">
+            <v-card class="loading-card" elevation="0">
+              <v-card-text class="py-8">
+                <v-progress-circular
+                  indeterminate
+                  color="primary"
+                  size="64"
+                  class="mb-4"
+                />
+                <h3 class="loading-title">Učitavam podatke o turi...</h3>
+                <p class="loading-subtitle">Molimo sačekajte trenutak</p>
+              </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
+      </div>
+
+      <v-row v-else justify="center">
         <v-col cols="12" md="10" lg="8">
           <v-form ref="form" v-model="valid" @submit.prevent="createTour" class="tour-form">
             
@@ -224,10 +244,10 @@
                     prepend-icon="mdi-content-save"
                     type="submit"
                     :loading="loading"
-                    :disabled="!valid"
+                    :disabled="!valid || loadingTour"
                     class="action-btn submit-btn"
                   >
-                    Kreiraj turu
+                    {{ submitButtonText }}
                   </v-btn>
                 </div>
               </v-card-text>
@@ -260,8 +280,8 @@
 </template>
 
 <script>
-import { ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, reactive, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import tourAPI from '../api/tours'
 import { useAuthStore } from '../stores/auth'
 
@@ -269,14 +289,28 @@ export default {
   name: 'TourCreate',
   setup() {
     const router = useRouter()
+    const route = useRoute()
     const authStore = useAuthStore()
     
     const valid = ref(false)
     const loading = ref(false)
+    const loadingTour = ref(false)
     const newImageUrl = ref('')
     const showSnackbar = ref(false)
     const snackbarMessage = ref('')
     const snackbarColor = ref('success')
+
+    // Computed properties for edit mode
+    const isEditMode = computed(() => !!route.params.id)
+    const tourId = computed(() => route.params.id ? parseInt(route.params.id) : null)
+    const pageTitle = computed(() => isEditMode.value ? 'Editovanje ture' : 'Kreiranje nove ture')
+    const submitButtonText = computed(() => isEditMode.value ? 'Ažuriraj turu' : 'Kreiraj turu')
+    const heroTitle = computed(() => isEditMode.value ? 'Editovanje ture' : 'Kreiranje nove ture')
+    const heroSubtitle = computed(() => 
+      isEditMode.value 
+        ? 'Ažurirajte informacije o vašoj turi'
+        : 'Podelite svoje omiljeno mesto sa svetom i kreirajte nezaboravno putovanje'
+    )
 
     const tourData = reactive({
       name: '',
@@ -332,6 +366,48 @@ export default {
       tourData.images.splice(index, 1)
     }
 
+    // Load tour data for editing
+    const loadTourData = async () => {
+      if (!isEditMode.value || !tourId.value) return
+
+      loadingTour.value = true
+      try {
+        const result = await tourAPI.getTourById(tourId.value)
+        
+        if (result.success) {
+          const tour = result.data
+          // Populate form with existing data
+          tourData.name = tour.name || ''
+          tourData.description = tour.description || ''
+          tourData.difficulty = tour.difficulty || ''
+          tourData.tags = tour.tags || []
+          tourData.images = tour.images || []
+          tourData.estimatedDuration = tour.estimatedDuration || null
+          
+          console.log('Tour data loaded for editing:', tour)
+        } else {
+          showSnackbar.value = true
+          snackbarMessage.value = result.error || 'Greška pri učitavanju ture'
+          snackbarColor.value = 'error'
+          // Redirect back if tour not found
+          setTimeout(() => {
+            router.push('/tours/my')
+          }, 2000)
+        }
+      } catch (error) {
+        console.error('Load tour error:', error)
+        showSnackbar.value = true
+        snackbarMessage.value = 'Greška pri učitavanju ture'
+        snackbarColor.value = 'error'
+        // Redirect back on error
+        setTimeout(() => {
+          router.push('/tours/my')
+        }, 2000)
+      } finally {
+        loadingTour.value = false
+      }
+    }
+
     const createTour = async () => {
       if (!valid.value) return
 
@@ -353,18 +429,27 @@ export default {
       loading.value = true
 
       try {
-        const result = await tourAPI.createTour({
+        const tourPayload = {
           name: tourData.name,
           description: tourData.description,
           difficulty: tourData.difficulty,
           tags: tourData.tags,
           images: tourData.images,
           estimatedDuration: tourData.estimatedDuration
-        })
+        }
+
+        let result
+        if (isEditMode.value) {
+          // Update existing tour
+          result = await tourAPI.updateTour(tourId.value, tourPayload)
+        } else {
+          // Create new tour
+          result = await tourAPI.createTour(tourPayload)
+        }
 
         if (result.success) {
           showSnackbar.value = true
-          snackbarMessage.value = 'Tura je uspešno kreirana!'
+          snackbarMessage.value = isEditMode.value ? 'Tura je uspešno ažurirana!' : 'Tura je uspešno kreirana!'
           snackbarColor.value = 'success'
           
           // Redirect to my tours after a short delay
@@ -377,9 +462,9 @@ export default {
           snackbarColor.value = 'error'
         }
       } catch (error) {
-        console.error('Create tour error:', error)
+        console.error('Save tour error:', error)
         showSnackbar.value = true
-        snackbarMessage.value = 'Greška prilikom kreiranja ture'
+        snackbarMessage.value = isEditMode.value ? 'Greška prilikom ažuriranja ture' : 'Greška prilikom kreiranja ture'
         snackbarColor.value = 'error'
       } finally {
         loading.value = false
@@ -390,9 +475,17 @@ export default {
       router.push('/tours')
     }
 
+    // Load tour data when component mounts (for edit mode)
+    onMounted(() => {
+      if (isEditMode.value) {
+        loadTourData()
+      }
+    })
+
     return {
       valid,
       loading,
+      loadingTour,
       newImageUrl,
       showSnackbar,
       snackbarMessage,
@@ -403,6 +496,11 @@ export default {
       descriptionRules,
       difficultyRules,
       tagsRules,
+      isEditMode,
+      pageTitle,
+      submitButtonText,
+      heroTitle,
+      heroSubtitle,
       addImage,
       removeImage,
       createTour,
@@ -483,6 +581,32 @@ export default {
 .content-container {
   padding-top: 2rem;
   padding-bottom: 3rem;
+}
+
+/* Loading State */
+.loading-container {
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-card {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(212, 115, 10, 0.08);
+  border: 1px solid var(--warm-border);
+}
+
+.loading-title {
+  color: rgba(0, 0, 0, 0.87);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.loading-subtitle {
+  color: rgba(0, 0, 0, 0.6);
+  margin: 0;
 }
 
 /* Form Styling */
