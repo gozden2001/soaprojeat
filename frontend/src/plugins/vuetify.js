@@ -12,13 +12,15 @@ export default createVuetify({
     themes: {
       light: {
         colors: {
-          primary: '#1976D2',
-          secondary: '#424242',
-          accent: '#82B1FF',
-          error: '#FF5252',
-          info: '#2196F3',
-          success: '#4CAF50',
-          warning: '#FFC107'
+          primary: '#D4730A',     // Warm orange
+          secondary: '#F59E0B',   // Warm amber
+          accent: '#F97316',      // Warm accent
+          error: '#DC2626',       // Warm red
+          info: '#0EA5E9',        // Sky blue
+          success: '#059669',     // Emerald
+          warning: '#D97706',     // Amber
+          background: '#FFFBF5',  // Warm background
+          surface: '#FEF7ED',     // Warm surface
         }
       }
     }

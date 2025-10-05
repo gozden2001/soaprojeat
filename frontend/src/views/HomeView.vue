@@ -58,18 +58,6 @@
                     Kreiraj Ture (Uskoro)
                   </v-btn>
                 </template>
-                
-                <template v-if="authStore.isTurista">
-                  <v-btn 
-                    color="warning" 
-                    size="large"
-                    prepend-icon="mdi-compass"
-                    variant="outlined"
-                    disabled
-                  >
-                    Istraži Ture (Uskoro)
-                  </v-btn>
-                </template>
               </div>
             </template>
             
