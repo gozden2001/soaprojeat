@@ -410,6 +410,52 @@ const tourExecutionProxy = createProxyMiddleware({
 
 app.use('/api/tour-execution', tourExecutionProxy);
 
+// Debug middleware for keypoints routes
+app.use('/api/keypoints', (req, res, next) => {
+    console.log(`[DEBUG] KeyPoints ${req.method} request to ${req.originalUrl}`);
+    console.log(`[DEBUG] Body:`, req.body);
+    
+    // Remove problematic expect header
+    if (req.headers.expect) {
+        delete req.headers.expect;
+        console.log(`[DEBUG] Removed expect header`);
+    }
+    
+    next();
+});
+
+// KeyPoints Service Proxy (using same TourService)
+const keyPointsProxy = createProxyMiddleware({
+    target: process.env.TOUR_SERVICE_URL || 'http://tour-service:3003',
+    changeOrigin: true,
+    pathRewrite: {
+        '^/api/keypoints': '/api/tours/keypoints'
+    },
+    onProxyReq: (proxyReq, req, res) => {
+        console.log(`[KEYPOINTS-PROXY] ${req.method} ${req.originalUrl} -> ${process.env.TOUR_SERVICE_URL || 'http://tour-service:3003'}${req.url}`);
+        
+        // Handle JSON body serialization
+        if (req.body && (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH')) {
+            const bodyData = JSON.stringify(req.body);
+            proxyReq.setHeader('Content-Type', 'application/json');
+            proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
+            proxyReq.write(bodyData);
+        }
+    },
+    onProxyRes: (proxyRes, req, res) => {
+        console.log(`[KEYPOINTS-PROXY] Response ${proxyRes.statusCode} for ${req.method} ${req.originalUrl}`);
+    },
+    onError: (err, req, res) => {
+        console.error(`[KEYPOINTS-PROXY] Error for ${req.method} ${req.originalUrl}:`, err.message);
+        res.status(503).json({
+            error: 'KeyPoints service unavailable',
+            message: 'The key points service is currently unavailable. Please try again later.'
+        });
+    }
+});
+
+app.use('/api/keypoints', keyPointsProxy);
+
 // 404 handler
 app.use('*', (req, res) => {
     res.status(404).json({
